@@ -1,0 +1,10 @@
+{
+  "name": "ZipRepairTool",
+  "name_Chinese": "压缩包修复工具",
+  "version": "1.0",
+  "repo": "https://github.com/848488489-ff/ZipRepairTool",
+  "license": "Unlicense",
+  "jdk": "8",
+  "description": "Repair ZIP archives damaged in transit, check integrity.",
+  "description_Chinese": "修复因传输而损坏的 ZIP 压缩包、并检查其完整性。"
+}

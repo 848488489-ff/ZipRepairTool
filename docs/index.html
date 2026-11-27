@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZipRepairTool</title>
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang">
+    <a href="index.html" class="active">English</a>
+    <a href="index_zh.html">简体中文</a>
+  </div>
+
+  <h1>ZipRepairTool<span class="dot">.</span></h1>
+  <p class="sub">Normal ZIP repair for archives damaged in transit &mdash; plus a full integrity check, so any extractor can open them again.</p>
+
+  <div class="btn-row">
+    <a class="btn" data-download href="https://github.com/848488489-ff/ZipRepairTool/releases/download/v1.0/ZipRepairTool.jar">&#11015; Download JAR (v1.0)</a>
+    <a class="btn ghost" href="https://github.com/848488489-ff/ZipRepairTool">GitHub Repository</a>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">01</span>Why some archives fail</h2>
+    <p>Archives damaged in transit have inconsistent metadata: their <b>central directory</b> and <b>local file header</b> metadata disagree (rewritten names, altered sizes/CRC-32, fake directory entries, forged EOCD signatures). Strict extractors &mdash; 7-Zip, WinRAR, Windows Explorer, Python&rsquo;s <code>zipfile</code> &mdash; reject them, while JVM applications still read them because <code>java.util.zip.ZipFile</code> trusts the central directory. Some damaged archives also have corrupt <b>file contents</b> (PNG chunk CRC-32 / IDAT Adler-32, Ogg header fields, minified JSON).</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">02</span>Features</h2>
+    <ul>
+      <li><b>Check</b> &mdash; full inspection: entry count, local/central metadata divergence (names, sizes, CRC), fake directories, forged EOCD, data CRC-32 verification, unreadable entries &mdash; with an OK / DAMAGED verdict.</li>
+      <li><b>Repair</b> &mdash; rebuild a clean ZIP via <code>ZipFile</code> + <code>ZipOutputStream</code>; the output opens in any extractor. It also repairs damaged PNG / Ogg / JSON contents so extracted files open again.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">03</span>Usage</h2>
+    <pre><code>java -jar ZipRepairTool.jar                              # GUI (Check / Repair)
+java -jar ZipRepairTool.jar -check &lt;in.zip&gt;
+java -jar ZipRepairTool.jar -repair &lt;in.zip&gt; &lt;out.zip&gt;</code></pre>
+    <p class="muted">UI language follows the system locale (Chinese / English); CLI output is English. Requires JDK 8+.</p>
+  </div>
+
+  <div class="footer">
+    Released under the <a href="https://unlicense.org">Unlicense</a> (public domain) &middot; Built with JDK 8 &middot; <span data-version>v1.0</span>
+  </div>
+</div>
+</body>
+</html>
