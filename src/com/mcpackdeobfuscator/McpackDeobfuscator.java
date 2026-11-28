@@ -87,9 +87,7 @@ public class McpackDeobfuscator extends JFrame {
     public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/mcpack-deobfuscator");
 
     /** Preference key marking that the first-run license notice was shown. */
-    private static final String PREF_LICENSE_SEEN = "licenseSeen";
-    /** Unlicense full-text URL. */
-    private static final String UNLICENSE_URL = "https://unlicense.org";
+    private static final String PREF_LICENSE_ACCEPTED = "licenseAccepted";
     /** License file name (bundled in the jar, or in the working directory). */
     private static final String LICENSE_FILE = "LICENSE";
 
@@ -258,38 +256,27 @@ public class McpackDeobfuscator extends JFrame {
         }
     }
 
-    /** Show the Unlicense notice once on first run. */
+    /** First-run gate: show full Unlicense text; must agree to continue, else exit. */
     private void maybeShowLicenseOnFirstRun() {
         Preferences prefs = Preferences.userNodeForPackage(McpackDeobfuscator.class);
-        if (prefs.getBoolean(PREF_LICENSE_SEEN, false)) {
+        if (prefs.getBoolean(PREF_LICENSE_ACCEPTED, false)) {
             return;
         }
-        Object[] options = {tr("license.view"), tr("license.ok")};
-        int r = JOptionPane.showOptionDialog(this,
-                tr("license.firstRun"), tr("license.title"),
-                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
-                null, options, options[1]);
-        prefs.putBoolean(PREF_LICENSE_SEEN, true);
-        if (r == 0) {
-            showLicense();
-        }
-    }
-
-    /** Display the full Unlicense text in a scrollable dialog. */
-    private void showLicense() {
-        String text = readLicenseText();
-        JTextArea area = new JTextArea(text, 18, 60);
+        JTextArea area = new JTextArea(readLicenseText(), 20, 64);
         area.setEditable(false);
         area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         area.setCaretPosition(0);
         JScrollPane scroll = new JScrollPane(area);
-        Object[] options = {tr("license.openSite"), tr("about.close")};
+        Object[] options = {tr("license.agree"), tr("license.decline")};
         int r = JOptionPane.showOptionDialog(this, scroll, tr("license.title"),
                 JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
-                null, options, options[1]);
+                null, options, options[0]);
         if (r == 0) {
-            openUrl(UNLICENSE_URL);
+            prefs.putBoolean(PREF_LICENSE_ACCEPTED, true);
+            return;
         }
+        // Declined or dialog closed: cannot continue.
+        System.exit(0);
     }
 
     /** Read license text from classpath or working directory, else a minimal notice. */
@@ -310,15 +297,6 @@ public class McpackDeobfuscator extends JFrame {
             // fall through
         }
         return "Unlicense (public domain). See https://unlicense.org\n";
-    }
-
-    /** Open a URL in the system browser, ignoring failures. */
-    private static void openUrl(String url) {
-        try {
-            Desktop.getDesktop().browse(new URI(url));
-        } catch (Exception ex) {
-            // Browsing unavailable.
-        }
     }
 
     /** Check for a newer release on a background thread, then report. */
