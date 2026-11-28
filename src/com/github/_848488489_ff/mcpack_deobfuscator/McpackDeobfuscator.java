@@ -270,11 +270,11 @@ public class McpackDeobfuscator extends JFrame {
                     if (latest == null) {
                         msg = tr("about.update.failed");
                         type = JOptionPane.ERROR_MESSAGE;
-                    } else if (latest.equals("v" + VERSION)) {
-                        msg = trf("about.update.latest", VERSION);
+                    } else if (compareVersions(latest, VERSION) > 0) {
+                        msg = trf("about.update.new", latest, GITHUB_URL + "/releases/latest");
                         type = JOptionPane.INFORMATION_MESSAGE;
                     } else {
-                        msg = trf("about.update.new", latest, GITHUB_URL + "/releases/latest");
+                        msg = trf("about.update.latest", VERSION);
                         type = JOptionPane.INFORMATION_MESSAGE;
                     }
                     JOptionPane.showMessageDialog(McpackDeobfuscator.this, msg, title, type);
@@ -1482,8 +1482,8 @@ public class McpackDeobfuscator extends JFrame {
             }
             System.out.println("当前版本: " + VERSION);
             System.out.println("最新发布: " + latest);
-            System.out.println(latest.equals("v" + VERSION)
-                    ? "已是最新版本。" : "发现新版本: " + latest);
+            System.out.println(compareVersions(latest, VERSION) > 0
+                    ? "发现新版本: " + latest : "已是最新版本。");
         } else {
             if (latest == null) {
                 System.out.println("update check failed: " + (err == null ? "no release info" : err));
@@ -1491,8 +1491,8 @@ public class McpackDeobfuscator extends JFrame {
             }
             System.out.println("current version: " + VERSION);
             System.out.println("latest release : " + latest);
-            System.out.println(latest.equals("v" + VERSION)
-                    ? "You are up to date." : "A new version is available: " + latest);
+            System.out.println(compareVersions(latest, VERSION) > 0
+                    ? "A new version is available: " + latest : "You are up to date.");
         }
     }
 
@@ -1512,6 +1512,54 @@ public class McpackDeobfuscator extends JFrame {
         conn.setRequestProperty("Accept", "application/vnd.github+json");
         conn.setRequestProperty("User-Agent", "McpackDeobfuscator/" + VERSION);
         return conn;
+    }
+
+    /**
+     * Compare two semantic versions (optional leading 'v', dot-separated
+     * numeric components, missing components treated as 0, non-numeric suffixes
+     * on a component ignored). Returns a negative number if {@code a} is older
+     * than {@code b}, 0 if equal, positive if {@code a} is newer. So
+     * {@code v1.2.1} is newer than {@code v1.2}, and {@code v1.2} is not newer
+     * than local {@code 1.2.1}.
+     */
+    private static int compareVersions(String a, String b) {
+        String[] as = stripV(a).split("\\.");
+        String[] bs = stripV(b).split("\\.");
+        int n = Math.max(as.length, bs.length);
+        for (int i = 0; i < n; i++) {
+            int ai = numComponent(as, i);
+            int bi = numComponent(bs, i);
+            if (ai != bi) {
+                return ai < bi ? -1 : 1;
+            }
+        }
+        return 0;
+    }
+
+    /** Strip an optional leading 'v'/'V'. */
+    private static String stripV(String s) {
+        String t = s.trim();
+        return (!t.isEmpty() && (t.charAt(0) == 'v' || t.charAt(0) == 'V')) ? t.substring(1) : t;
+    }
+
+    /** Numeric prefix of component {@code i}, or 0 if absent/non-numeric. */
+    private static int numComponent(String[] parts, int i) {
+        if (i >= parts.length) {
+            return 0;
+        }
+        String p = parts[i];
+        int end = 0;
+        while (end < p.length() && Character.isDigit(p.charAt(end))) {
+            end++;
+        }
+        if (end == 0) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(p.substring(0, end));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** Extract the {@code tag_name} field from a GitHub API JSON response. */
