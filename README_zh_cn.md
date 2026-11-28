@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.1-blue.svg" alt="版本 1.1"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2-blue.svg" alt="版本 1.2"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="许可证：Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="构建通过">
@@ -27,10 +27,10 @@
 图形界面工具，用于**反混淆**被 **PackSquash** 等工具混淆或保护的
 **Minecraft 资源包（mcpack）**。这类资源包无法被严格校验的解压软件
 （7-Zip、WinRAR、Windows 资源管理器、Python 的 `zipfile`）打开，即使游戏
-本身能正常读取。本工具能检测混淆、重建干净压缩包、并修复被混淆的文件
+本身能正常读取。本工具能检测混淆、重建干净压缩包、并还原被混淆的文件
 内容，让提取出的文件真正能打开。
 
-它还提供完整性**检查**功能，以及可调参数的**混淆**模式（修复的逆操作），
+它还提供完整性**检查**功能，以及可调参数的**混淆**模式（反混淆的逆操作），
 用于主动制造这类资源包。
 
 ## 为什么这类资源包打不开
@@ -55,12 +55,12 @@
 数据后仍然报错：
 
 - **PNG 混淆**：把一个随机的密钥异或进每个数据块的 CRC-32，以及 IDAT 的
-  zlib 流末尾的 Adler-32。数据块本身未变，因此无需知道密钥即可修复：
+  zlib 流末尾的 Adler-32。数据块本身未变，因此无需知道密钥即可还原：
   解压 IDAT 流、重算 Adler-32、重算每个数据块的 CRC-32。
 - **Ogg 混淆**：首页流的序列号被改写（+1）、每个 granule 位置被映射为
-  `i64::MIN + granule`、Vorbis 识别头的码率字段被强制置 -1。修复会还原
+  `i64::MIN + granule`、Vorbis 识别头的码率字段被强制置 -1。反混淆会还原
   序列号、反映射 granule，并重算 Ogg 页的 CRC-32。
-- **JSON 压缩**：空白被删除。修复会重新格式化（Prettify）文件，使其可读、
+- **JSON 压缩**：空白被删除。反混淆会重新格式化（Prettify）文件，使其可读、
   可编辑。
 
 ## 功能
@@ -73,12 +73,12 @@
   granule 被映射 / 码率被置 -1，以及混淆特有的 CRC 指纹（本地头与中央目录
   的 CRC 字段互相一致，但都与真实数据不符——因为同一个密钥被异或进了两个
   字段）。
-- **修复（反混淆）**：重建干净压缩包。用 `ZipFile`（随机读取）读出数据，
+- **反混淆**：重建干净压缩包。用 `ZipFile`（随机读取）读出数据，
   再通过 `ZipOutputStream` 重新写出，让它重新生成一套完全一致的元数据。
   输出的压缩包任何解压软件都能打开。它还会对包内的 `.png`、`.ogg`/`.oga`、
-  `.json`/`.mcmeta`/`.jsonc` 与 `.nbt` 条目按上述方式修复 / 校验，使提取
+  `.json`/`.mcmeta`/`.jsonc` 与 `.nbt` 条目按上述方式还原 / 校验，使提取
   出的文件能正常打开。
-- **混淆**：修复的逆操作。可调参数：改名方式（none / upper / digit /
+- **混淆**：反混淆的逆操作。可调参数：改名方式（none / upper / digit /
   random）、影响条目比例、伪装目录、白名单（不触碰的条目）、伪 EOCD 前缀、
   中央目录大小扰动、CRC-32 扰动、随机种子，以及**内容混淆**——对包内的
   PNG / Ogg / JSON 文件内容施加混淆（PNG 块 CRC-32 与 IDAT Adler-32 异或
@@ -90,7 +90,7 @@
 
 ## 使用方法
 
-图形界面（三个标签页：检查 / 修复 / 混淆；把 ZIP 拖进标签页，或点击
+图形界面（三个标签页：检查 / 反混淆 / 混淆；把 ZIP 拖进标签页，或点击
 选择）：
 
     java -jar mcpack-deobfuscator.jar
@@ -98,7 +98,7 @@
 命令行：
 
     java -jar mcpack-deobfuscator.jar -check <输入.zip>
-    java -jar mcpack-deobfuscator.jar -repair <输入.zip> <输出.zip>
+    java -jar mcpack-deobfuscator.jar -deobfuscate <输入.zip> <输出.zip>
     java -jar mcpack-deobfuscator.jar -obfuscate <输入.zip> <输出.zip>
         [--name <none|upper|digit|random>] [--percent <0-100>]
         [--fake-dir <0-100>] [--eocd] [--crc] [--no-sizes]
@@ -130,7 +130,7 @@
 
 界面语言跟随系统（中文 / 英文），可在窗口中切换；命令行输出为英文。
 
-### 检测与修复混淆的包
+### 检测与反混淆混淆的包
 
 被 PackSquash 混淆的资源包会被自动识别，并给出专门的 `check.packsquash`
 结论以及分项统计：
@@ -144,13 +144,13 @@
       906 个条目符合 PackSquash CRC 指纹（本地头与中央目录 CRC 一致但与数据不符）
       124 个 JSON 疑似被压缩（minify）
 
-修复时既重建 ZIP 容器，也修复被混淆的文件内容，使提取出的文件真正可用：
+反混淆时既重建 ZIP 容器，也还原被混淆的文件内容，使提取出的文件真正可用：
 
     $ java -jar mcpack-deobfuscator.jar -repair "pack.zip" out.zip
     ok=909 skipped=0 fakeDirs=2 bytes=6272438
     content: pngFixed=676 oggFixed=6 jsonPrettified=125 nbtChecked=0 nbtBad=0
 
-修复后再次检查会得到 `check.ok`，所有混淆计数归零。
+反混淆后再次检查会得到 `check.ok`，所有混淆计数归零。
 
 ## 构建
 

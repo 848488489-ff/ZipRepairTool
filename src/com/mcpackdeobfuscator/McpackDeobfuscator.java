@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.prefs.Preferences;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.BorderFactory;
@@ -59,14 +60,14 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
- * Zip Repair Tool - GUI and command-line front end.
+ * mcpack-deobfuscator - GUI and command-line front end.
  *
  * The GUI has two areas: Repair and Obfuscate (Encrypt). The Obfuscate area offers
  * a set of tunable parameters (name rewrite mode, percentage, forged EOCD,
  * CRC perturbation, RNG seed) on top of named presets.
  *
  * Without arguments the Swing GUI is shown. Command-line modes:
- *   java -jar mcpack-deobfuscator.jar -repair <in.zip> <out.zip>
+ *   java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>
  *   java -jar mcpack-deobfuscator.jar -detect <in.zip>
  *   java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> <preset>
  *       [--name <none|upper|digit|random>] [--percent <0-100>]
@@ -84,6 +85,13 @@ public class McpackDeobfuscator extends JFrame {
 
     /** Project repository URL (shown in the About dialog and CLI). */
     public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/mcpack-deobfuscator");
+
+    /** Preference key marking that the first-run license notice was shown. */
+    private static final String PREF_LICENSE_SEEN = "licenseSeen";
+    /** Unlicense full-text URL. */
+    private static final String UNLICENSE_URL = "https://unlicense.org";
+    /** License file name (bundled in the jar, or in the working directory). */
+    private static final String LICENSE_FILE = "LICENSE";
 
     /**
      * Read a string value from the bundled {@code /version.json} resource.
@@ -250,6 +258,69 @@ public class McpackDeobfuscator extends JFrame {
         }
     }
 
+    /** Show the Unlicense notice once on first run. */
+    private void maybeShowLicenseOnFirstRun() {
+        Preferences prefs = Preferences.userNodeForPackage(McpackDeobfuscator.class);
+        if (prefs.getBoolean(PREF_LICENSE_SEEN, false)) {
+            return;
+        }
+        Object[] options = {tr("license.view"), tr("license.ok")};
+        int r = JOptionPane.showOptionDialog(this,
+                tr("license.firstRun"), tr("license.title"),
+                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
+                null, options, options[1]);
+        prefs.putBoolean(PREF_LICENSE_SEEN, true);
+        if (r == 0) {
+            showLicense();
+        }
+    }
+
+    /** Display the full Unlicense text in a scrollable dialog. */
+    private void showLicense() {
+        String text = readLicenseText();
+        JTextArea area = new JTextArea(text, 18, 60);
+        area.setEditable(false);
+        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        area.setCaretPosition(0);
+        JScrollPane scroll = new JScrollPane(area);
+        Object[] options = {tr("license.openSite"), tr("about.close")};
+        int r = JOptionPane.showOptionDialog(this, scroll, tr("license.title"),
+                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
+                null, options, options[1]);
+        if (r == 0) {
+            openUrl(UNLICENSE_URL);
+        }
+    }
+
+    /** Read license text from classpath or working directory, else a minimal notice. */
+    private static String readLicenseText() {
+        try (InputStream in = McpackDeobfuscator.class.getResourceAsStream("/" + LICENSE_FILE)) {
+            if (in != null) {
+                return readAll(in);
+            }
+        } catch (Exception ignored) {
+            // fall through
+        }
+        try {
+            java.nio.file.Path p = java.nio.file.Paths.get(LICENSE_FILE);
+            if (java.nio.file.Files.exists(p)) {
+                return new String(java.nio.file.Files.readAllBytes(p), StandardCharsets.UTF_8);
+            }
+        } catch (Exception ignored) {
+            // fall through
+        }
+        return "Unlicense (public domain). See https://unlicense.org\n";
+    }
+
+    /** Open a URL in the system browser, ignoring failures. */
+    private static void openUrl(String url) {
+        try {
+            Desktop.getDesktop().browse(new URI(url));
+        } catch (Exception ex) {
+            // Browsing unavailable.
+        }
+    }
+
     /** Check for a newer release on a background thread, then report. */
     private void checkUpdateGui(final boolean zh) {
         setBusy(true);
@@ -401,6 +472,19 @@ public class McpackDeobfuscator extends JFrame {
         return input.resolveSibling(name + suffix + ".zip");
     }
 
+    /** Whether two paths point at the same file (normalized; case-insensitive on Windows). */
+    private static boolean samePath(Path a, Path b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        String sa = a.toAbsolutePath().normalize().toString();
+        String sb = b.toAbsolutePath().normalize().toString();
+        if (System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win")) {
+            return sa.equalsIgnoreCase(sb);
+        }
+        return sa.equals(sb);
+    }
+
     // -----------------------------------------------------------------
     // Check (inspect) area.
     // -----------------------------------------------------------------
@@ -510,6 +594,7 @@ public class McpackDeobfuscator extends JFrame {
             logArea.setText("");
             appendLog(tr("check.header"));
 
+            final long startNanos = System.nanoTime();
             SwingWorker<CheckEngine.CheckResult, String> worker =
                     new SwingWorker<CheckEngine.CheckResult, String>() {
                 @Override
@@ -533,6 +618,7 @@ public class McpackDeobfuscator extends JFrame {
                         }
                         appendLog("");
                         appendLog(tr("check.verdict.header") + " " + tr(r.verdictKey));
+                        appendLog(trf("check.elapsed", (System.nanoTime() - startNanos) / 1e9));
                         statusLabel.setText(tr(r.verdictKey));
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -672,6 +758,14 @@ public class McpackDeobfuscator extends JFrame {
             }
             final Path input = Paths.get(in);
             final Path output = Paths.get(out);
+            if (samePath(input, output)) {
+                int choice = JOptionPane.showConfirmDialog(McpackDeobfuscator.this,
+                        tr("repair.samefile"), tr("repair.samefile.title"),
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
             if (outputField.getText().trim().isEmpty()) {
                 outputField.setText(defaultOutput(input, "_repaired").toString());
             }
@@ -693,6 +787,7 @@ public class McpackDeobfuscator extends JFrame {
             }
             appendLog(tr("repair.header"));
 
+            final long startNanos = System.nanoTime();
             SwingWorker<RepairEngine.Result, String> worker = new SwingWorker<RepairEngine.Result, String>() {
                 @Override
                 protected RepairEngine.Result doInBackground() throws Exception {
@@ -712,6 +807,7 @@ public class McpackDeobfuscator extends JFrame {
                         appendLog(trf("repair.done", r.ok, r.skipped, r.fakeDirs, r.bytes));
                         appendLog(trf("repair.content",
                                 r.pngFixed, r.oggFixed, r.jsonPrettified, r.nbtChecked, r.nbtBad));
+                        appendLog(trf("repair.elapsed", (System.nanoTime() - startNanos) / 1e9));
                         if (!r.warnings.isEmpty()) {
                             appendLog(tr("warnings.header"));
                             for (String w : r.warnings) {
@@ -1058,6 +1154,7 @@ public class McpackDeobfuscator extends JFrame {
                     opts.fakeDirPercent, opts.fakeEocd, opts.perturbCrc,
                     opts.perturbSizes, opts.seed));
 
+            final long startNanos = System.nanoTime();
             SwingWorker<ObfuscateEngine.ObfuscateResult, String> worker =
                     new SwingWorker<ObfuscateEngine.ObfuscateResult, String>() {
                 @Override
@@ -1076,6 +1173,7 @@ public class McpackDeobfuscator extends JFrame {
                             appendLog(trf("obfuscate.content",
                                     r.pngObfuscated, r.oggObfuscated, r.jsonMinified));
                         }
+                        appendLog(trf("obfuscate.elapsed", (System.nanoTime() - startNanos) / 1e9));
                         appendLog("");
                         appendLog(trf("status.done", output.toString()));
                         statusLabel.setText(tr("status.done.short"));
@@ -1137,14 +1235,16 @@ public class McpackDeobfuscator extends JFrame {
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new McpackDeobfuscator().setVisible(true);
+                McpackDeobfuscator app = new McpackDeobfuscator();
+                app.setVisible(true);
+                app.maybeShowLicenseOnFirstRun();
             }
         });
     }
 
     /**
      * Handle a CLI command. Returns true if {@code args} matched a command
-     * (help / update / version / repair / detect / check / obfuscate).
+     * (help / update / version / deobfuscate / detect / check / obfuscate).
      */
     private static boolean dispatchCli(String[] args, String lang) throws Exception {
         if (args.length >= 1 && ("-help".equals(args[0]) || "--help".equals(args[0])
@@ -1160,9 +1260,9 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("McpackDeobfuscator " + VERSION + " (" + GITHUB_URL + ")");
             return true;
         }
-        if (args.length >= 1 && "-repair".equals(args[0])) {
+        if (args.length >= 1 && ("-repair".equals(args[0]) || "-deobfuscate".equals(args[0]))) {
             if (args.length < 3) {
-                System.err.println("usage: -repair <in.zip> <out.zip>");
+                System.err.println("usage: -deobfuscate <in.zip> <out.zip>");
                 System.exit(2);
             }
             requireInput(Paths.get(args[1]));
@@ -1203,14 +1303,16 @@ public class McpackDeobfuscator extends JFrame {
     }
 
     private static void runCliRepair(final Path input, final Path output) throws Exception {
-        System.out.println("== Zip Repair Tool ==");
+        System.out.println("== mcpack-deobfuscator ==");
         System.out.println("input : " + input.toAbsolutePath());
         System.out.println("output: " + output.toAbsolutePath());
 
         List<String> findings = RepairEngine.detect(input);
         System.out.println("findings: " + (findings.isEmpty() ? "none" : findings));
 
+        long t0 = System.nanoTime();
         RepairEngine.Result r = RepairEngine.repair(input, output, null);
+        double sec = (System.nanoTime() - t0) / 1e9;
         System.out.println("ok=" + r.ok + " skipped=" + r.skipped
                 + " fakeDirs=" + r.fakeDirs + " bytes=" + r.bytes);
         System.out.println("content: pngFixed=" + r.pngFixed + " oggFixed=" + r.oggFixed
@@ -1219,6 +1321,7 @@ public class McpackDeobfuscator extends JFrame {
         for (String w : r.warnings) {
             System.out.println("WARN " + w);
         }
+        System.out.println(String.format(java.util.Locale.ROOT, "elapsed: %.2f s", sec));
         System.out.println("done: " + output.toAbsolutePath());
     }
 
@@ -1229,7 +1332,9 @@ public class McpackDeobfuscator extends JFrame {
 
     /** Command-line check entry point. */
     private static void runCliCheck(final Path input) throws Exception {
+        long t0 = System.nanoTime();
         CheckEngine.CheckResult r = CheckEngine.check(input, Lang.EN);
+        double sec = (System.nanoTime() - t0) / 1e9;
         System.out.println("verdict: " + r.verdictKey);
         System.out.println("entries=" + r.entryCount
                 + " nameMismatch=" + r.nameMismatch
@@ -1248,6 +1353,7 @@ public class McpackDeobfuscator extends JFrame {
         for (String d : r.details) {
             System.out.println("  " + d);
         }
+        System.out.println(String.format(java.util.Locale.ROOT, "elapsed: %.2f s", sec));
     }
 
     /** Command-line protection entry point with tunable parameters. */
@@ -1293,7 +1399,7 @@ public class McpackDeobfuscator extends JFrame {
             }
         }
 
-        System.out.println("== Zip Repair Tool ==");
+        System.out.println("== mcpack-deobfuscator ==");
         System.out.println("input : " + input.toAbsolutePath());
         System.out.println("output: " + output.toAbsolutePath());
         System.out.println("mode=" + opts.nameMode + " percent=" + opts.namePercent
@@ -1305,6 +1411,7 @@ public class McpackDeobfuscator extends JFrame {
                 + " contentJson=" + opts.obfuscateJson
                 + " seed=" + opts.seed + " whitelist=" + opts.whitelist);
         ObfuscateEngine.ObfuscateResult r;
+        long t0 = System.nanoTime();
         try {
             r = ObfuscateEngine.obfuscate(input, output, opts);
         } catch (IllegalArgumentException ex) {
@@ -1316,6 +1423,8 @@ public class McpackDeobfuscator extends JFrame {
                 + " bytes=" + r.bytes);
         System.out.println("content: png=" + r.pngObfuscated + " ogg=" + r.oggObfuscated
                 + " json=" + r.jsonMinified);
+        double sec = (System.nanoTime() - t0) / 1e9;
+        System.out.println(String.format(java.util.Locale.ROOT, "elapsed: %.2f s", sec));
         System.out.println("done: " + output.toAbsolutePath());
     }
 
@@ -1357,7 +1466,7 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  java -jar mcpack-deobfuscator.jar -version                  显示版本");
             System.out.println("  java -jar mcpack-deobfuscator.jar -update                   检查更新(GitHub API,无需令牌)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -check <输入.zip>         检查压缩包");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -repair <输入.zip> <输出.zip>  修复压缩包");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <输入.zip> <输出.zip>  反混淆资源包");
             System.out.println("  java -jar mcpack-deobfuscator.jar -detect <输入.zip>        检测内容混淆");
             System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <输入.zip> <输出.zip> [选项]  施加混淆");
             System.out.println();
@@ -1379,7 +1488,7 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  仓库: " + GITHUB_URL);
             System.out.println("  版本: " + VERSION);
         } else {
-            System.out.println("== " + loadMetaLang("name", false, "Zip Repair Tool") + " ==");
+            System.out.println("== " + loadMetaLang("name", false, "mcpack-deobfuscator") + " ==");
             System.out.println(loadMetaLang("description", false,
                     "Deobfuscate Minecraft resource packs (mcpack) protected or obfuscated by PackSquash tools, and verify their integrity."));
             System.out.println();
@@ -1390,7 +1499,7 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  java -jar mcpack-deobfuscator.jar -version                Show version");
             System.out.println("  java -jar mcpack-deobfuscator.jar -update                 Check for updates (GitHub API, no token)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip>         Inspect an archive");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -repair <in.zip> <out.zip>   Repair an archive");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>   Deobfuscate a protected resource pack");
             System.out.println("  java -jar mcpack-deobfuscator.jar -detect <in.zip>        Detect PackSquash obfuscation");
             System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> [options]   Re-apply obfuscation");
             System.out.println();

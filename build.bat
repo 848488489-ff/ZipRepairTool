@@ -28,6 +28,7 @@ echo [2/3] Copying resources...
 copy /y "%SRC%\messages_English.properties" "%OUT%\" >nul
 copy /y "%SRC%\messages_Chinese.properties" "%OUT%\" >nul
 copy /y "%ROOT%version.json" "%OUT%\" >nul
+copy /y "%ROOT%LICENSE" "%OUT%\" >nul
 
 echo [3/3] Packaging JAR...
 "%JDK8%\jar.exe" cfe "%JAR%" com.mcpackdeobfuscator.McpackDeobfuscator -C "%OUT%" .

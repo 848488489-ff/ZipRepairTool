@@ -25,6 +25,7 @@ echo "[1/3] Compiling..."
 echo "[2/3] Copying resources..."
 cp "$SRC/messages_English.properties" "$SRC/messages_Chinese.properties" "$OUT/"
 cp "$ROOT/version.json" "$OUT/"
+cp "$ROOT/LICENSE" "$OUT/"
 
 echo "[3/3] Packaging JAR..."
 jar cfe "$JAR" com.mcpackdeobfuscator.McpackDeobfuscator -C "$OUT" . || exit 1

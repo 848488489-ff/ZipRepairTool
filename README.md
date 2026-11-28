@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.1-blue.svg" alt="Version 1.1"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2-blue.svg" alt="Version 1.2"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="License: Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build passing">
@@ -104,7 +104,7 @@ pick one with the file chooser):
 Command line:
 
     java -jar mcpack-deobfuscator.jar -check <in.zip>
-    java -jar mcpack-deobfuscator.jar -repair <in.zip> <out.zip>
+    java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>
     java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip>
         [--name <none|upper|digit|random>] [--percent <0-100>]
         [--fake-dir <0-100>] [--eocd] [--crc] [--no-sizes]

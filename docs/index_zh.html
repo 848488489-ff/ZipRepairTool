@@ -18,7 +18,7 @@
   <p class="sub">反混淆被 PackSquash 等工具混淆或保护的 Minecraft 资源包（mcpack）——附带完整的完整性检查与可调参数的混淆模式。</p>
 
   <div class="btn-row">
-    <a class="btn" data-download href="https://github.com/848488489-ff/mcpack-deobfuscator/releases/download/v1.1/mcpack-deobfuscator.jar">&#11015; 下载 JAR（v1.1）</a>
+    <a class="btn" data-download href="https://github.com/848488489-ff/mcpack-deobfuscator/releases/download/v1.2/mcpack-deobfuscator.jar">&#11015; 下载 JAR（v1.2）</a>
     <a class="btn ghost" href="https://github.com/848488489-ff/mcpack-deobfuscator">GitHub 仓库</a>
   </div>
 
@@ -31,14 +31,14 @@
     <h2><span class="n">02</span>功能</h2>
     <ul>
       <li><b>检查</b>——全面检测：条目数、本地头与中央目录元数据差异（文件名、大小、CRC）、伪目录、伪造 EOCD、数据 CRC-32 校验、无法读取的条目——并给出 完好 / 疑似混淆保护 / 已损坏 的结论，同时检测 PackSquash 混淆（被混淆的 PNG、Ogg、JSON）。</li>
-      <li><b>修复（反混淆）</b>——通过 <code>ZipFile</code> + <code>ZipOutputStream</code> 重建干净压缩包；输出的压缩包任何解压软件都能打开。它还会修复被 PackSquash 混淆的 PNG / Ogg / JSON 内容，让提取出的文件真正能显示和播放。</li>
-      <li><b>混淆</b>——修复的逆操作，参数可调：改名方式、比例、伪装目录、白名单、伪 EOCD、CRC 扰动、随机种子，以及对 PNG / Ogg / JSON 的内容混淆。</li>
+      <li><b>反混淆</b>——通过 <code>ZipFile</code> + <code>ZipOutputStream</code> 重建干净压缩包；输出的压缩包任何解压软件都能打开。它还会还原被 PackSquash 混淆的 PNG / Ogg / JSON 内容，让提取出的文件真正能显示和播放。</li>
+      <li><b>混淆</b>——反混淆的逆操作，参数可调：改名方式、比例、伪装目录、白名单、伪 EOCD、CRC 扰动、随机种子，以及对 PNG / Ogg / JSON 的内容混淆。</li>
     </ul>
   </div>
 
   <div class="card">
     <h2><span class="n">03</span>使用方法</h2>
-    <pre><code>java -jar mcpack-deobfuscator.jar                              # 图形界面（检查 / 修复 / 混淆）
+    <pre><code>java -jar mcpack-deobfuscator.jar                              # 图形界面（检查 / 反混淆 / 混淆）
 java -jar mcpack-deobfuscator.jar -check &lt;输入.zip&gt;
 java -jar mcpack-deobfuscator.jar -repair &lt;输入.zip&gt; &lt;输出.zip&gt;
 java -jar mcpack-deobfuscator.jar -obfuscate &lt;输入.zip&gt; &lt;输出.zip&gt; \
@@ -49,7 +49,7 @@ java -jar mcpack-deobfuscator.jar -obfuscate &lt;输入.zip&gt; &lt;输出.zip&g
   </div>
 
   <div class="footer">
-    以 <a href="https://unlicense.org">Unlicense</a>（公有领域）发布 &middot; 基于 JDK 8 构建 &middot; <span data-version>v1.1</span>
+    以 <a href="https://unlicense.org">Unlicense</a>（公有领域）发布 &middot; 基于 JDK 8 构建 &middot; <span data-version>v1.2</span>
   </div>
 </div>
 </body>
