@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Core repair engine.
+ * Core deobfuscation engine.
  *
  * Strategy: open the archive with java.util.zip.ZipFile (random access) and
  * rebuild a clean ZIP through ZipOutputStream. ZipFile locates every entry via
@@ -31,12 +31,12 @@ import java.util.zip.ZipOutputStream;
  * Re-emitting every entry through ZipOutputStream regenerates all metadata
  * from scratch, producing an archive that any extractor can open.
  */
-public final class RepairEngine {
+public final class DeobfuscateEngine {
 
-    private RepairEngine() {
+    private DeobfuscateEngine() {
     }
 
-    /** Outcome of a repair run. */
+    /** Outcome of a deobfuscation run. */
     public static final class Result {
         /** Entries successfully copied. */
         public int ok = 0;
@@ -46,9 +46,9 @@ public final class RepairEngine {
         public int fakeDirs = 0;
         /** Total decompressed bytes written. */
         public long bytes = 0;
-        /** PNG files whose obfuscated chunk CRC / Adler-32 was repaired. */
+        /** PNG files whose obfuscated chunk CRC / Adler-32 was deobfuscated. */
         public int pngFixed = 0;
-        /** Ogg files whose obfuscated headers were repaired. */
+        /** Ogg files whose obfuscated headers were deobfuscated. */
         public int oggFixed = 0;
         /** JSON files re-formatted (prettified). */
         public int jsonPrettified = 0;
@@ -56,7 +56,7 @@ public final class RepairEngine {
         public int nbtChecked = 0;
         /** NBT files that failed structural validation. */
         public int nbtBad = 0;
-        /** Per-entry problems encountered during repair. */
+        /** Per-entry problems encountered during deobfuscation. */
         public final List<String> warnings = new ArrayList<String>();
     }
 
@@ -109,12 +109,12 @@ public final class RepairEngine {
      * Rebuild a clean ZIP archive from the input.
      *
      * @param input    the obfuscated archive
-     * @param output   where to write the repaired archive (overwritten)
+     * @param output   where to write the deobfuscated archive (overwritten)
      * @param progress optional progress callback, may be null
-     * @return the repair result
+     * @return the result
      * @throws IOException if the archive cannot be opened or written
      */
-    public static Result repair(Path input, Path output, Progress progress) throws IOException {
+    public static Result deobfuscate(Path input, Path output, Progress progress) throws IOException {
         Result res = new Result();
 
         try (ZipFile zf = new ZipFile(input.toFile());
@@ -152,7 +152,7 @@ public final class RepairEngine {
                     // fully consistent set of metadata.
                     zos.putNextEntry(out);
                     try (InputStream in = zf.getInputStream(e)) {
-                        writeRepaired(in, zos, name, res);
+                        writeDeobfuscated(in, zos, name, res);
                     }
                     zos.closeEntry();
                     res.ok++;
@@ -171,19 +171,19 @@ public final class RepairEngine {
     }
 
     /**
-     * Stream an entry to the output archive, applying content-level repair to
+     * Stream an entry to the output archive, applying content-level deobfuscation to
      * known content-obfuscated file types (PNG, Ogg Vorbis, JSON, NBT).
      *
-     * <p>Only the listed types are buffered and repaired; every other entry is
-     * streamed through unchanged, so repair stays fast on large archives.
+     * <p>Only the listed types are buffered and deobfuscated; every other entry is
+     * streamed through unchanged, so deobfuscation stays fast on large archives.
      */
-    private static void writeRepaired(InputStream in, ZipOutputStream zos,
+    private static void writeDeobfuscated(InputStream in, ZipOutputStream zos,
             String name, Result res) throws IOException {
         String lower = name.toLowerCase(Locale.ROOT);
 
         if (lower.endsWith(".png")) {
             byte[] data = readAll(in);
-            byte[] fixed = ContentRepairer.fixPng(data);
+            byte[] fixed = ContentDeobfuscator.fixPng(data);
             if (fixed != data) {
                 res.pngFixed++;
             }
@@ -193,7 +193,7 @@ public final class RepairEngine {
         }
         if (lower.endsWith(".ogg") || lower.endsWith(".oga")) {
             byte[] data = readAll(in);
-            byte[] fixed = ContentRepairer.fixOgg(data);
+            byte[] fixed = ContentDeobfuscator.fixOgg(data);
             if (fixed != data) {
                 res.oggFixed++;
             }
@@ -208,7 +208,7 @@ public final class RepairEngine {
             // Only re-format content that is actually minified (no line breaks):
             // re-indenting an already pretty file would double the indentation.
             if (!containsLineBreak(data)) {
-                byte[] pretty = ContentRepairer.prettifyJson(data);
+                byte[] pretty = ContentDeobfuscator.prettifyJson(data);
                 if (pretty != null && !java.util.Arrays.equals(pretty, data)) {
                     res.jsonPrettified++;
                     zos.write(pretty);
@@ -222,7 +222,7 @@ public final class RepairEngine {
         }
         if (lower.endsWith(".nbt")) {
             byte[] data = readAll(in);
-            String err = ContentRepairer.checkNbt(data);
+            String err = ContentDeobfuscator.checkNbt(data);
             res.nbtChecked++;
             if (err != null) {
                 res.nbtBad++;

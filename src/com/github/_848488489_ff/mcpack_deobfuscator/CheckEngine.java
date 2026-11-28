@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -278,14 +278,14 @@ public final class CheckEngine {
                     if (bufKeep != null) {
                         byte[] d = bufKeep.toByteArray();
                         if (wantPng) {
-                            if (ContentRepairer.isPngObfuscated(d)) {
+                            if (ContentDeobfuscator.isPngObfuscated(d)) {
                                 r.packSquashPng++;
                                 if (r.packSquashPngSample.isEmpty()) {
                                     r.packSquashPngSample = e.getName();
                                 }
                             }
                         } else if (wantOgg) {
-                            if (ContentRepairer.isOggObfuscated(d)) {
+                            if (ContentDeobfuscator.isOggObfuscated(d)) {
                                 r.packSquashOgg++;
                             }
                         } else if (wantJson) {

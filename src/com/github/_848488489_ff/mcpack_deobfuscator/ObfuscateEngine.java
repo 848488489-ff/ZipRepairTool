@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Obfuscation engine - the inverse of RepairEngine.
+ * Obfuscation engine - the inverse of DeobfuscateEngine.
  *
  * Produces a ZIP whose local file headers disagree with the central directory
  * in a way that JVM-based readers tolerate but strict extractors (7-Zip,
@@ -95,7 +95,7 @@ public final class ObfuscateEngine {
         public int oggObfuscated = 0;
         /** JSON files that were minified. */
         public int jsonMinified = 0;
-        /** Total bytes of the transformed archive. */
+        /** Total bytes of the obfuscated archive. */
         public long bytes = 0;
         /** Whitelist entries that do not exist in the source archive. */
         public final List<String> missingWhitelist = new ArrayList<String>();
@@ -129,7 +129,7 @@ public final class ObfuscateEngine {
         // Validate whitelist entries against the actual archive contents.
         // A whitelist entry must match at least one entry name exactly or as a
         // path prefix; otherwise the configuration is wrong and the output
-        // would silently leave transformed entries untransformed.
+        // would silently leave obfuscated entries un-obfuscated.
         if (!opts.whitelist.isEmpty()) {
             StringBuilder missing = new StringBuilder();
             for (String w : opts.whitelist) {

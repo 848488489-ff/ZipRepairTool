@@ -9,19 +9,21 @@ set "ROOT=%~dp0"
 set "SRC=%ROOT%src"
 set "OUT=%ROOT%out"
 set "JAR=%ROOT%mcpack-deobfuscator.jar"
+set "PKG=%SRC%\com\github\_848488489_ff\mcpack_deobfuscator"
+set "MAIN=com.github._848488489_ff.mcpack_deobfuscator.McpackDeobfuscator"
 
 if exist "%OUT%" rmdir /s /q "%OUT%"
 mkdir "%OUT%"
 
 echo [1/3] Compiling with JDK 8...
 "%JDK8%\javac.exe" -encoding UTF-8 -d "%OUT%" ^
-  "%SRC%\com\mcpackdeobfuscator\Lang.java" ^
-  "%SRC%\com\mcpackdeobfuscator\ContentRepairer.java" ^
-  "%SRC%\com\mcpackdeobfuscator\ContentObfuscator.java" ^
-  "%SRC%\com\mcpackdeobfuscator\CheckEngine.java" ^
-  "%SRC%\com\mcpackdeobfuscator\RepairEngine.java" ^
-  "%SRC%\com\mcpackdeobfuscator\ObfuscateEngine.java" ^
-  "%SRC%\com\mcpackdeobfuscator\McpackDeobfuscator.java"
+  "%PKG%\Lang.java" ^
+  "%PKG%\ContentDeobfuscator.java" ^
+  "%PKG%\ContentObfuscator.java" ^
+  "%PKG%\CheckEngine.java" ^
+  "%PKG%\DeobfuscateEngine.java" ^
+  "%PKG%\ObfuscateEngine.java" ^
+  "%PKG%\McpackDeobfuscator.java"
 if errorlevel 1 exit /b 1
 
 echo [2/3] Copying resources...
@@ -31,7 +33,7 @@ copy /y "%ROOT%version.json" "%OUT%\" >nul
 copy /y "%ROOT%LICENSE" "%OUT%\" >nul
 
 echo [3/3] Packaging JAR...
-"%JDK8%\jar.exe" cfe "%JAR%" com.mcpackdeobfuscator.McpackDeobfuscator -C "%OUT%" .
+"%JDK8%\jar.exe" cfe "%JAR%" %MAIN% -C "%OUT%" .
 if errorlevel 1 exit /b 1
 
 echo.

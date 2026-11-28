@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.util.Locale;
 import java.util.MissingResourceException;

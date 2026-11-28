@@ -18,7 +18,7 @@
   <p class="sub">Deobfuscate Minecraft resource packs (mcpack) protected or obfuscated by PackSquash tools &mdash; plus a full integrity check and a tunable obfuscate mode.</p>
 
   <div class="btn-row">
-    <a class="btn" data-download href="https://github.com/848488489-ff/mcpack-deobfuscator/releases/download/v1.2/mcpack-deobfuscator.jar">&#11015; Download JAR (v1.2)</a>
+    <a class="btn" data-download href="https://github.com/848488489-ff/mcpack-deobfuscator/releases/download/v1.2.1.1/mcpack-deobfuscator.jar">&#11015; Download JAR (v1.2.1)</a>
     <a class="btn ghost" href="https://github.com/848488489-ff/mcpack-deobfuscator">GitHub Repository</a>
   </div>
 
@@ -31,7 +31,7 @@
     <h2><span class="n">02</span>Features</h2>
     <ul>
       <li><b>Check</b> &mdash; full inspection: entry count, local/central metadata divergence (names, sizes, CRC), fake directories, forged EOCD, data CRC-32 verification, unreadable entries &mdash; with an OK / PROTECTED / DAMAGED verdict, plus PackSquash detection (obfuscated PNG, Ogg, JSON).</li>
-      <li><b>Deobfuscate</b> &mdash; rebuild a clean ZIP via <code>ZipFile</code> + <code>ZipOutputStream</code>; the output opens in any extractor. It also repairs PackSquash-obfuscated PNG / Ogg / JSON contents so extracted files really display and play.</li>
+      <li><b>Deobfuscate</b> &mdash; rebuild a clean ZIP via <code>ZipFile</code> + <code>ZipOutputStream</code>; the output opens in any extractor. It also deobfuscates PackSquash-obfuscated PNG / Ogg / JSON contents so extracted files really display and play.</li>
       <li><b>Obfuscate</b> &mdash; the inverse of deobfuscation, with tunable parameters: name rewrite mode, percentage, fake directories, whitelist, forged EOCD, CRC perturbation, RNG seed, and content obfuscation of PNG / Ogg / JSON.</li>
     </ul>
   </div>
@@ -40,7 +40,7 @@
     <h2><span class="n">03</span>Usage</h2>
     <pre><code>java -jar mcpack-deobfuscator.jar                              # GUI (Check / Deobfuscate / Obfuscate)
 java -jar mcpack-deobfuscator.jar -check &lt;in.zip&gt;
-java -jar mcpack-deobfuscator.jar -repair &lt;in.zip&gt; &lt;out.zip&gt;
+java -jar mcpack-deobfuscator.jar -deobfuscate &lt;in.zip&gt; &lt;out.zip&gt;
 java -jar mcpack-deobfuscator.jar -obfuscate &lt;in.zip&gt; &lt;out.zip&gt; \
       [--name &lt;none|upper|digit|random&gt;] [--percent &lt;0-100&gt;] \
       [--fake-dir &lt;0-100&gt;] [--eocd] [--crc] [--no-sizes] \
@@ -49,7 +49,7 @@ java -jar mcpack-deobfuscator.jar -obfuscate &lt;in.zip&gt; &lt;out.zip&gt; \
   </div>
 
   <div class="footer">
-    Released under the <a href="https://unlicense.org">Unlicense</a> (public domain) &middot; Built with JDK 8 &middot; <span data-version>v1.2</span>
+    Released under the <a href="https://unlicense.org">Unlicense</a> (public domain) &middot; Built with JDK 8 &middot; <span data-version>v1.2.1</span>
   </div>
 </div>
 </body>

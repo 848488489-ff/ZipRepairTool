@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,24 +12,24 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 
 /**
- * Content-level repair of files stored inside an archive.
+ * Content-level deobfuscation of files stored inside an archive.
  *
- * The ZIP metadata repair done by {@link RepairEngine} only rebuilds a
+ * The ZIP metadata deobfuscation done by {@link DeobfuscateEngine} only rebuilds a
  * consistent ZIP container. It does not fix the *bytes of the stored files*.
  * Some protected resource packs (in particular those produced by a
  * PackSquash content obfuscator) additionally corrupt file contents, so
  * that even after the ZIP is rebuilt the extracted files still fail to open.
- * This class repairs those contents:
+ * This class deobfuscates those contents:
  *
  * <ul>
  *   <li><b>PNG</b> - a random key was XORed into every chunk CRC-32 and into
  *       the Adler-32 checksum at the tail of the IDAT zlib stream. The chunk
- *       data itself is untouched, so repair is possible without knowing the
+ *       data itself is untouched, so deobfuscation is possible without knowing the
  *       key: recompute the zlib Adler-32 by inflating the stream, and
  *       recompute every chunk CRC-32.
  *   <li><b>Ogg Vorbis</b> - the first page stream serial was rewritten (+1),
  *       every granule position mapped to {@code i64::MIN + granule} and the
- *       Vorbis identification header bitrate fields forced to -1. Repair
+ *       Vorbis identification header bitrate fields forced to -1. deobfuscate
  *       restores the serial from the second page, un-maps the granules and
  *       rewrites the page CRC-32 (Ogg CRC, polynomial 0x04C11DB7,
  *       non-reflected, initial 0, computed over the page with the CRC field
@@ -39,9 +39,9 @@ import java.util.zip.Inflater;
  *   <li><b>NBT</b> - structural validation of gzip-compressed NBT.
  * </ul>
  */
-public final class ContentRepairer {
+public final class ContentDeobfuscator {
 
-    private ContentRepairer() {
+    private ContentDeobfuscator() {
     }
 
     // -----------------------------------------------------------------
@@ -49,10 +49,10 @@ public final class ContentRepairer {
     // -----------------------------------------------------------------
 
     /**
-     * Repair a PNG datastream whose chunk CRC-32 / IDAT Adler-32 were obfuscated.
+     * Deobfuscate a PNG datastream whose chunk CRC-32 / IDAT Adler-32 were obfuscated.
      *
      * @param in the (possibly obfuscated) PNG bytes
-     * @return the repaired bytes if anything was changed, otherwise {@code in}
+     * @return the deobfuscated bytes if anything was changed, otherwise {@code in}
      */
     public static byte[] fixPng(byte[] in) {
         if (in == null || in.length < 33) {
@@ -82,7 +82,7 @@ public final class ContentRepairer {
             i += 12 + len;
         }
 
-        // Repair the zlib Adler-32 if a full inflate fails.
+        // Deobfuscate the zlib Adler-32 if a full inflate fails.
         List<int[]> idats = new ArrayList<int[]>();
         for (int[] c : chunks) {
             if (isType(out, c[0], "IDAT")) {
@@ -112,7 +112,7 @@ public final class ContentRepairer {
                 // Multi-IDAT: the zlib stream spans several chunks. Only the
                 // tail of the *last* chunk holds the Adler-32; intermediate
                 // chunk tails are deflate bytes that may have been obfuscated.
-                // Attempt the full-stream repair anyway.
+                // Attempt the full-stream deobfuscation anyway.
                 int total = 0;
                 for (int[] c : idats) {
                     total += c[2];
@@ -182,12 +182,12 @@ public final class ContentRepairer {
     // -----------------------------------------------------------------
 
     /**
-     * Repair an Ogg Vorbis stream whose first-page serial was rewritten (+1),
+     * Deobfuscate an Ogg Vorbis stream whose first-page serial was rewritten (+1),
      * whose granule positions were mapped to {@code i64::MIN + granule} and
      * whose bitrate fields were forced to -1.
      *
      * @param in the (possibly obfuscated) Ogg bytes
-     * @return the repaired bytes if anything was changed, otherwise {@code in}
+     * @return the deobfuscated bytes if anything was changed, otherwise {@code in}
      */
     public static byte[] fixOgg(byte[] in) {
         if (in == null || in.length < 27 || !isOggPage(in, 0)) {
@@ -233,7 +233,7 @@ public final class ContentRepairer {
 
         // 2. Un-map granule positions: mangled = i64::MIN + original. A real
         //    Vorbis granule is a sample count (0..2^62 range, or -1 for "none"),
-        //    so a value outside [-2^62, +2^62] marks a obfuscated page. The
+        //    so a value outside [-2^62, +2^62] marks an obfuscated page. The
         //    upper bound catches the wrapping case original == -1, which maps
         //    to a large positive value.
         for (int[] p : pages) {
@@ -305,7 +305,7 @@ public final class ContentRepairer {
 
     /**
      * True if the PNG datastream looks obfuscated: at least one
-     * chunk CRC-32 does not match the chunk contents. A obfuscated file's
+     * chunk CRC-32 does not match the chunk contents. An obfuscated file's
      * recomputed CRC never matches the stored one.
      */
     public static boolean isPngObfuscated(byte[] in) {
@@ -467,7 +467,7 @@ public final class ContentRepairer {
      * Minify JSON: strip every whitespace character outside strings.
      *
      * <p>This is the inverse of {@link #prettifyJson} and produces exactly the
-     * content that the repair path will re-format. Operates on the UTF-8
+     * content that the deobfuscation path will re-format. Operates on the UTF-8
      * decoded string, so multi-byte characters are preserved.
      *
      * @param in the JSON bytes (UTF-8)

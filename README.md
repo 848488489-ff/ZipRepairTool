@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2-blue.svg" alt="Version 1.2"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version 1.2.1"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="License: Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build passing">
@@ -28,11 +28,11 @@ mcpack-deobfuscator is a **Java** command-line and GUI tool that deobfuscates
 tools such as **PackSquash**. Such packs cannot be opened by strict extractors
 (7-Zip, WinRAR, Windows Explorer, Python's `zipfile`) even though the game
 itself reads them fine. This tool detects the obfuscation, rebuilds a clean
-archive, and repairs the obfuscated file contents so the extracted files
+archive, and deobfuscates the obfuscated file contents so the extracted files
 actually open again.
 
 It also offers an integrity **check** and a tunable **obfuscate** mode (the
-inverse of repair) for producing such packs deliberately.
+inverse of deobfuscate) for producing such packs deliberately.
 
 ## Why these packs fail
 
@@ -58,13 +58,13 @@ that strict extractors additionally fail on the extracted data:
 
 - **PNG obfuscation**: a random key is XORed into every chunk CRC-32 and into
   the Adler-32 at the tail of the IDAT zlib stream. The chunk data itself is
-  untouched, so repair is possible without knowing the key: inflate the IDAT
+  untouched, so deobfuscate is possible without knowing the key: inflate the IDAT
   stream, recompute the Adler-32 and recompute every chunk CRC-32.
 - **Ogg obfuscation**: the first page stream serial is rewritten (+1), every
   granule position is mapped to `i64::MIN + granule`, and the Vorbis
-  identification bitrate fields are forced to -1. Repair restores the serial,
+  identification bitrate fields are forced to -1. deobfuscate restores the serial,
   un-maps the granules and rewrites the Ogg page CRC-32.
-- **JSON minification**: whitespace is stripped. Repair re-formats (prettifies)
+- **JSON minification**: whitespace is stripped. deobfuscate re-formats (prettifies)
   the file so it is readable and editable again.
 
 ## Features
@@ -78,12 +78,12 @@ that strict extractors additionally fail on the extracted data:
   characteristic obfuscation CRC fingerprint (local and central CRC fields
   agree with each other but disagree with the real data, because one key was
   XORed into both).
-- **Repair**: rebuild a clean ZIP. Data is read with `ZipFile` (random access)
+- **deobfuscate**: rebuild a clean ZIP. Data is read with `ZipFile` (random access)
   and re-emitted through `ZipOutputStream`, which regenerates fully consistent
   metadata. The output opens in any extractor. Stored `.png`, `.ogg`/`.oga`,
-  `.json`/`.mcmeta`/`.jsonc` and `.nbt` entries are also repaired / validated
+  `.json`/`.mcmeta`/`.jsonc` and `.nbt` entries are also deobfuscated / validated
   as described above, so extracted files open correctly.
-- **Obfuscate**: the inverse of repair. Tunable parameters: name rewrite mode
+- **Obfuscate**: the inverse of deobfuscate. Tunable parameters: name rewrite mode
   (`none` / `upper` / `digit` / `random`), percentage of entries affected,
   fake directory disguises, whitelist (untouched entries), forged EOCD prefix,
   central-directory size perturbation, CRC-32 perturbation, RNG seed, and
@@ -96,7 +96,7 @@ that strict extractors additionally fail on the extracted data:
 
 ## Usage
 
-GUI (three tabs: Check / Repair / Obfuscate; drag & drop a ZIP onto a tab, or
+GUI (three tabs: Check / deobfuscate / Obfuscate; drag & drop a ZIP onto a tab, or
 pick one with the file chooser):
 
     java -jar mcpack-deobfuscator.jar
@@ -142,7 +142,7 @@ obfuscation.
 The UI language follows the system locale (Chinese / English) and can be
 changed from the window; the command-line output is English.
 
-### Detecting and repairing obfuscated packs
+### Detecting and deobfuscating obfuscated packs
 
 PackSquash obfuscated packs are recognised automatically and reported
 with the dedicated `check.packsquash` verdict plus a per-feature summary:
@@ -156,14 +156,14 @@ with the dedicated `check.packsquash` verdict plus a per-feature summary:
       906 entries with a PackSquash CRC fingerprint (local==central CRC, both differ from data)
       124 JSON files appear minified
 
-Repairing then rebuilds the ZIP container and fixes the obfuscated file
+Deobfuscating then rebuilds the ZIP container and fixes the obfuscated file
 contents, so the extracted files actually open:
 
-    $ java -jar mcpack-deobfuscator.jar -repair "pack.zip" out.zip
+    $ java -jar mcpack-deobfuscator.jar -deobfuscate "pack.zip" out.zip
     ok=909 skipped=0 fakeDirs=2 bytes=6272438
     content: pngFixed=676 oggFixed=6 jsonPrettified=125 nbtChecked=0 nbtBad=0
 
-After repair, a re-check reports `check.ok` with every obfuscation counter at
+After deobfuscate, a re-check reports `check.ok` with every obfuscation counter at
 zero.
 
 ## Build

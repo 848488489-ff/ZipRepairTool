@@ -1,4 +1,4 @@
-package com.mcpackdeobfuscator;
+package com.github._848488489_ff.mcpack_deobfuscator;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.prefs.Preferences;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.BorderFactory;
@@ -62,7 +61,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 /**
  * mcpack-deobfuscator - GUI and command-line front end.
  *
- * The GUI has two areas: Repair and Obfuscate (Encrypt). The Obfuscate area offers
+ * The GUI has two areas: Deobfuscate and Obfuscate (Encrypt). The Obfuscate area offers
  * a set of tunable parameters (name rewrite mode, percentage, forged EOCD,
  * CRC perturbation, RNG seed) on top of named presets.
  *
@@ -86,10 +85,6 @@ public class McpackDeobfuscator extends JFrame {
     /** Project repository URL (shown in the About dialog and CLI). */
     public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/mcpack-deobfuscator");
 
-    /** Preference key marking that the first-run license notice was shown. */
-    private static final String PREF_LICENSE_ACCEPTED = "licenseAccepted";
-    /** License file name (bundled in the jar, or in the working directory). */
-    private static final String LICENSE_FILE = "LICENSE";
 
     /**
      * Read a string value from the bundled {@code /version.json} resource.
@@ -173,7 +168,7 @@ public class McpackDeobfuscator extends JFrame {
     private final JComboBox<Lang> langBox = new JComboBox<Lang>(new Lang[]{Lang.AUTO, Lang.EN, Lang.ZH});
     private final JTabbedPane tabs = new JTabbedPane();
     private final CheckPanel checkPanel = new CheckPanel();
-    private final RepairPanel repairPanel = new RepairPanel();
+    private final DeobfuscatePanel deobfuscatePanel = new DeobfuscatePanel();
     private final ObfuscatePanel obfuscatePanel = new ObfuscatePanel();
     private final JProgressBar progressBar = new JProgressBar(0, 100);
     private final JLabel statusLabel = new JLabel();
@@ -205,7 +200,7 @@ public class McpackDeobfuscator extends JFrame {
         top.setBorder(BorderFactory.createEmptyBorder(6, 12, 0, 12));
 
         tabs.addTab("", checkPanel);
-        tabs.addTab("", repairPanel);
+        tabs.addTab("", deobfuscatePanel);
         tabs.addTab("", obfuscatePanel);
 
         // Bottom: progress + status.
@@ -254,49 +249,6 @@ public class McpackDeobfuscator extends JFrame {
                 // Desktop browsing unavailable; the URL is still shown.
             }
         }
-    }
-
-    /** First-run gate: show full Unlicense text; must agree to continue, else exit. */
-    private void maybeShowLicenseOnFirstRun() {
-        Preferences prefs = Preferences.userNodeForPackage(McpackDeobfuscator.class);
-        if (prefs.getBoolean(PREF_LICENSE_ACCEPTED, false)) {
-            return;
-        }
-        JTextArea area = new JTextArea(readLicenseText(), 20, 64);
-        area.setEditable(false);
-        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        area.setCaretPosition(0);
-        JScrollPane scroll = new JScrollPane(area);
-        Object[] options = {tr("license.agree"), tr("license.decline")};
-        int r = JOptionPane.showOptionDialog(this, scroll, tr("license.title"),
-                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
-                null, options, options[0]);
-        if (r == 0) {
-            prefs.putBoolean(PREF_LICENSE_ACCEPTED, true);
-            return;
-        }
-        // Declined or dialog closed: cannot continue.
-        System.exit(0);
-    }
-
-    /** Read license text from classpath or working directory, else a minimal notice. */
-    private static String readLicenseText() {
-        try (InputStream in = McpackDeobfuscator.class.getResourceAsStream("/" + LICENSE_FILE)) {
-            if (in != null) {
-                return readAll(in);
-            }
-        } catch (Exception ignored) {
-            // fall through
-        }
-        try {
-            java.nio.file.Path p = java.nio.file.Paths.get(LICENSE_FILE);
-            if (java.nio.file.Files.exists(p)) {
-                return new String(java.nio.file.Files.readAllBytes(p), StandardCharsets.UTF_8);
-            }
-        } catch (Exception ignored) {
-            // fall through
-        }
-        return "Unlicense (public domain). See https://unlicense.org\n";
     }
 
     /** Check for a newer release on a background thread, then report. */
@@ -380,12 +332,12 @@ public class McpackDeobfuscator extends JFrame {
         setTitle(loadMetaLang("name", zh, tr("app.title")));
         ((JLabel) ((JPanel) getContentPane().getComponent(0)).getComponent(0)).setText(tr("lang.label"));
         tabs.setTitleAt(0, tr("tab.check"));
-        tabs.setTitleAt(1, tr("tab.repair"));
+        tabs.setTitleAt(1, tr("tab.deobfuscate"));
         tabs.setTitleAt(2, tr("tab.obfuscate"));
         helpMenu.setText(tr("menu.help"));
         aboutItem.setText(tr("menu.about"));
         checkPanel.refresh();
-        repairPanel.refresh();
+        deobfuscatePanel.refresh();
         obfuscatePanel.refresh();
         statusLabel.setText(tr("status.ready"));
     }
@@ -400,7 +352,7 @@ public class McpackDeobfuscator extends JFrame {
 
     private void setBusy(boolean busy) {
         checkPanel.setEnabledAll(!busy);
-        repairPanel.setEnabledAll(!busy);
+        deobfuscatePanel.setEnabledAll(!busy);
         obfuscatePanel.setEnabledAll(!busy);
         setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR)
                 : Cursor.getDefaultCursor());
@@ -611,20 +563,20 @@ public class McpackDeobfuscator extends JFrame {
     }
 
     // -----------------------------------------------------------------
-    // Repair area.
+    // Deobfuscate area.
     // -----------------------------------------------------------------
 
-    private class RepairPanel extends JPanel implements Refreshable {
+    private class DeobfuscatePanel extends JPanel implements Refreshable {
         private static final long serialVersionUID = 1L;
 
         private final JTextField inputField = new JTextField(38);
         private final JTextField outputField = new JTextField(38);
         private final JButton browseIn = new JButton();
         private final JButton browseOut = new JButton();
-        private final JButton repairBtn = new JButton();
+        private final JButton deobfuscateBtn = new JButton();
         private final JTextArea logArea = new JTextArea();
 
-        RepairPanel() {
+        DeobfuscatePanel() {
             setLayout(new BorderLayout());
 
             JPanel form = new JPanel(new GridBagLayout());
@@ -662,7 +614,7 @@ public class McpackDeobfuscator extends JFrame {
             add(scroll, BorderLayout.CENTER);
 
             JPanel south = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
-            south.add(repairBtn);
+            south.add(deobfuscateBtn);
             add(south, BorderLayout.SOUTH);
 
             installDrop(this, inputField);
@@ -676,9 +628,9 @@ public class McpackDeobfuscator extends JFrame {
                     choose(outputField, true);
                 }
             });
-            repairBtn.addActionListener(new ActionListener() {
+            deobfuscateBtn.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    startRepair();
+                    startDeobfuscate();
                 }
             });
         }
@@ -688,7 +640,7 @@ public class McpackDeobfuscator extends JFrame {
             setLabelText("output.label", tr("output.label"));
             browseIn.setText(tr("browse"));
             browseOut.setText(tr("browse"));
-            repairBtn.setText(tr("repair"));
+            deobfuscateBtn.setText(tr("deobfuscate"));
             ((javax.swing.border.TitledBorder) findScrollBorder()).setTitle(tr("log.header"));
         }
 
@@ -718,7 +670,7 @@ public class McpackDeobfuscator extends JFrame {
             outputField.setEnabled(b);
             browseIn.setEnabled(b);
             browseOut.setEnabled(b);
-            repairBtn.setEnabled(b);
+            deobfuscateBtn.setEnabled(b);
         }
 
         void appendLog(String line) {
@@ -726,7 +678,7 @@ public class McpackDeobfuscator extends JFrame {
             logArea.setCaretPosition(logArea.getDocument().getLength());
         }
 
-        private void startRepair() {
+        private void startDeobfuscate() {
             final String in = inputField.getText().trim();
             final String out = outputField.getText().trim();
             if (in.isEmpty() || out.isEmpty()) {
@@ -738,21 +690,21 @@ public class McpackDeobfuscator extends JFrame {
             final Path output = Paths.get(out);
             if (samePath(input, output)) {
                 int choice = JOptionPane.showConfirmDialog(McpackDeobfuscator.this,
-                        tr("repair.samefile"), tr("repair.samefile.title"),
+                        tr("deobfuscate.samefile"), tr("deobfuscate.samefile.title"),
                         JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                 if (choice != JOptionPane.YES_OPTION) {
                     return;
                 }
             }
             if (outputField.getText().trim().isEmpty()) {
-                outputField.setText(defaultOutput(input, "_repaired").toString());
+                outputField.setText(defaultOutput(input, "_deobfuscated").toString());
             }
 
             setBusy(true);
             logArea.setText("");
             appendLog(tr("detect.header"));
             try {
-                List<String> findings = RepairEngine.detect(input);
+                List<String> findings = DeobfuscateEngine.detect(input);
                 if (findings.isEmpty()) {
                     appendLog("  " + tr("detect.none"));
                 } else {
@@ -763,13 +715,13 @@ public class McpackDeobfuscator extends JFrame {
             } catch (Exception ex) {
                 appendLog("  " + tr("error.open") + ": " + ex.getMessage());
             }
-            appendLog(tr("repair.header"));
+            appendLog(tr("deobfuscate.header"));
 
             final long startNanos = System.nanoTime();
-            SwingWorker<RepairEngine.Result, String> worker = new SwingWorker<RepairEngine.Result, String>() {
+            SwingWorker<DeobfuscateEngine.Result, String> worker = new SwingWorker<DeobfuscateEngine.Result, String>() {
                 @Override
-                protected RepairEngine.Result doInBackground() throws Exception {
-                    return RepairEngine.repair(input, output, new RepairEngine.Progress() {
+                protected DeobfuscateEngine.Result doInBackground() throws Exception {
+                    return DeobfuscateEngine.deobfuscate(input, output, new DeobfuscateEngine.Progress() {
                         public void update(int done, int total) {
                             setProgress(total > 0 ? (int) (done * 100L / total) : 0);
                         }
@@ -780,12 +732,12 @@ public class McpackDeobfuscator extends JFrame {
                 protected void done() {
                     setBusy(false);
                     try {
-                        RepairEngine.Result r = get();
+                        DeobfuscateEngine.Result r = get();
                         appendLog("");
-                        appendLog(trf("repair.done", r.ok, r.skipped, r.fakeDirs, r.bytes));
-                        appendLog(trf("repair.content",
+                        appendLog(trf("deobfuscate.done", r.ok, r.skipped, r.fakeDirs, r.bytes));
+                        appendLog(trf("deobfuscate.content",
                                 r.pngFixed, r.oggFixed, r.jsonPrettified, r.nbtChecked, r.nbtBad));
-                        appendLog(trf("repair.elapsed", (System.nanoTime() - startNanos) / 1e9));
+                        appendLog(trf("deobfuscate.elapsed", (System.nanoTime() - startNanos) / 1e9));
                         if (!r.warnings.isEmpty()) {
                             appendLog(tr("warnings.header"));
                             for (String w : r.warnings) {
@@ -1215,7 +1167,6 @@ public class McpackDeobfuscator extends JFrame {
             public void run() {
                 McpackDeobfuscator app = new McpackDeobfuscator();
                 app.setVisible(true);
-                app.maybeShowLicenseOnFirstRun();
             }
         });
     }
@@ -1238,13 +1189,13 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("McpackDeobfuscator " + VERSION + " (" + GITHUB_URL + ")");
             return true;
         }
-        if (args.length >= 1 && ("-repair".equals(args[0]) || "-deobfuscate".equals(args[0]))) {
+        if (args.length >= 1 && ("-deobfuscate".equals(args[0]))) {
             if (args.length < 3) {
                 System.err.println("usage: -deobfuscate <in.zip> <out.zip>");
                 System.exit(2);
             }
             requireInput(Paths.get(args[1]));
-            runCliRepair(Paths.get(args[1]), Paths.get(args[2]));
+            runCliDeobfuscate(Paths.get(args[1]), Paths.get(args[2]));
             return true;
         }
         if (args.length >= 1 && "-detect".equals(args[0])) {
@@ -1280,16 +1231,16 @@ public class McpackDeobfuscator extends JFrame {
         return false;
     }
 
-    private static void runCliRepair(final Path input, final Path output) throws Exception {
+    private static void runCliDeobfuscate(final Path input, final Path output) throws Exception {
         System.out.println("== mcpack-deobfuscator ==");
         System.out.println("input : " + input.toAbsolutePath());
         System.out.println("output: " + output.toAbsolutePath());
 
-        List<String> findings = RepairEngine.detect(input);
+        List<String> findings = DeobfuscateEngine.detect(input);
         System.out.println("findings: " + (findings.isEmpty() ? "none" : findings));
 
         long t0 = System.nanoTime();
-        RepairEngine.Result r = RepairEngine.repair(input, output, null);
+        DeobfuscateEngine.Result r = DeobfuscateEngine.deobfuscate(input, output, null);
         double sec = (System.nanoTime() - t0) / 1e9;
         System.out.println("ok=" + r.ok + " skipped=" + r.skipped
                 + " fakeDirs=" + r.fakeDirs + " bytes=" + r.bytes);
@@ -1304,7 +1255,7 @@ public class McpackDeobfuscator extends JFrame {
     }
 
     private static void runCliDetect(final Path input) throws Exception {
-        List<String> findings = RepairEngine.detect(input);
+        List<String> findings = DeobfuscateEngine.detect(input);
         System.out.println("findings: " + (findings.isEmpty() ? "none" : findings));
     }
 
@@ -1434,7 +1385,7 @@ public class McpackDeobfuscator extends JFrame {
         if (zh) {
             System.out.println("== " + loadMetaLang("name", true, "\u6211\u7684\u4e16\u754c\u8d44\u6e90\u5305\u53cd\u6df7\u6dc6\u5de5\u5177") + " ==");
             System.out.println(loadMetaLang("description", true,
-                    "\u53cd\u6df7\u6dc6\u88ab PackSquash \u5f0f\u5de5\u5177\u6df7\u6dc6/\u4fdd\u62a4\u7684 Minecraft \u8d44\u6e90\u5305\uff08mcpack\uff09\uff0c\u5e76\u6821\u9a8c\u5176\u5b8c\u6574\u6027\u3002"));
+                    "\u53cd\u6df7\u6dc6\u88ab PackSquash\u5de5\u5177\u6df7\u6dc6/\u4fdd\u62a4\u7684 Minecraft \u8d44\u6e90\u5305\uff08mcpack\uff09\uff0c\u5e76\u6821\u9a8c\u5176\u5b8c\u6574\u6027\u3002"));
             System.out.println("注意: 中文输出不推荐,请优先使用英文。");
             System.out.println();
             System.out.println("用法:");
@@ -1511,7 +1462,7 @@ public class McpackDeobfuscator extends JFrame {
         String latest = null;
         String err = null;
         try {
-            URL url = new URL("https://api.github.com/repos/848488489-ff/McpackDeobfuscator/releases/latest");
+            URL url = new URL("https://api.github.com/repos/848488489-ff/mcpack-deobfuscator/releases/latest");
             // No Authorization header anywhere: anonymous request, no token.
             // TLS validation failures are reported as errors, never bypassed.
             HttpURLConnection conn = openConn(url);

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2-blue.svg" alt="版本 1.2"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="版本 1.2.1"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="许可证：Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="构建通过">
@@ -146,7 +146,7 @@
 
 反混淆时既重建 ZIP 容器，也还原被混淆的文件内容，使提取出的文件真正可用：
 
-    $ java -jar mcpack-deobfuscator.jar -repair "pack.zip" out.zip
+    $ java -jar mcpack-deobfuscator.jar -deobfuscate "pack.zip" out.zip
     ok=909 skipped=0 fakeDirs=2 bytes=6272438
     content: pngFixed=676 oggFixed=6 jsonPrettified=125 nbtChecked=0 nbtBad=0
 
