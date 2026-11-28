@@ -1,7 +1,7 @@
 {
   "name": "mcpack-deobfuscator",
   "name_Chinese": "我的世界资源包反混淆工具",
-  "version": "1.0",
+  "version": "1.1",
   "repo": "https://github.com/848488489-ff/mcpack-deobfuscator",
   "license": "Unlicense",
   "jdk": "8",

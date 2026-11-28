@@ -83,7 +83,7 @@ public class McpackDeobfuscator extends JFrame {
     public static final String VERSION = loadMeta("version", "0.0.0");
 
     /** Project repository URL (shown in the About dialog and CLI). */
-    public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/McpackDeobfuscator");
+    public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/mcpack-deobfuscator");
 
     /**
      * Read a string value from the bundled {@code /version.json} resource.
@@ -225,12 +225,12 @@ public class McpackDeobfuscator extends JFrame {
         getContentPane().add(bottom, BorderLayout.SOUTH);
     }
 
-    /** About dialog: version + repository link, with localized name/description. */
+    /** About dialog: version, repository link and update check, localized. */
     private void showAbout() {
         boolean zh = Lang.resolve(mode) == Lang.ZH;
         String name = loadMetaLang("name", zh, tr("app.title"));
         String desc = loadMetaLang("description", zh, "");
-        Object[] options = {tr("about.open"), tr("about.close")};
+        Object[] options = {tr("about.checkUpdate"), tr("about.open"), tr("about.close")};
         String msg = name + " v" + VERSION + "\n\n"
                 + (desc.isEmpty() ? "" : desc + "\n\n")
                 + (zh ? "\u4ed3\u5e93\u5730\u5740\uff1a\n" : "Repository:\n")
@@ -240,6 +240,8 @@ public class McpackDeobfuscator extends JFrame {
                 name, JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
         if (r == 0) {
+            checkUpdateGui(zh);
+        } else if (r == 1) {
             try {
                 Desktop.getDesktop().browse(new URI(GITHUB_URL));
             } catch (Exception ex) {
@@ -247,6 +249,45 @@ public class McpackDeobfuscator extends JFrame {
             }
         }
     }
+
+    /** Check for a newer release on a background thread, then report. */
+    private void checkUpdateGui(final boolean zh) {
+        setBusy(true);
+        SwingWorker<String, Void> w = new SwingWorker<String, Void>() {
+            protected String doInBackground() throws Exception {
+                URL url = new URL("https://api.github.com/repos/848488489-ff/mcpack-deobfuscator/releases/latest");
+                HttpURLConnection conn = openConn(url);
+                int code = conn.getResponseCode();
+                return code == 200 ? parseTagName(readAll(conn.getInputStream())) : null;
+            }
+            protected void done() {
+                String title = tr("about.update.title");
+                try {
+                    String latest = get();
+                    String msg;
+                    int type;
+                    if (latest == null) {
+                        msg = tr("about.update.failed");
+                        type = JOptionPane.ERROR_MESSAGE;
+                    } else if (latest.equals("v" + VERSION)) {
+                        msg = trf("about.update.latest", VERSION);
+                        type = JOptionPane.INFORMATION_MESSAGE;
+                    } else {
+                        msg = trf("about.update.new", latest, GITHUB_URL + "/releases/latest");
+                        type = JOptionPane.INFORMATION_MESSAGE;
+                    }
+                    JOptionPane.showMessageDialog(McpackDeobfuscator.this, msg, title, type);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(McpackDeobfuscator.this,
+                            tr("about.update.failed"), title, JOptionPane.ERROR_MESSAGE);
+                } finally {
+                    setBusy(false);
+                }
+            }
+        };
+        w.execute();
+    }
+
 
     private void setupLanguageBox() {
         langBox.setRenderer(new javax.swing.DefaultListCellRenderer() {

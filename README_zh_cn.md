@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.0-blue.svg" alt="版本 1.0"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.1-blue.svg" alt="版本 1.1"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="许可证：Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="构建通过">
