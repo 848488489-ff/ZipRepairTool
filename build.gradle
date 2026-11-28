@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.github._848488489_ff'
+version = '1.2.1'
+
+// Compile to Java 8 bytecode (run with JDK 8+; JDK 8 is what we build with).
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+// This project keeps its layout: Java sources + message bundles in src/,
+// version.json + LICENSE in the project root. No external dependencies.
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+            exclude '**/*.properties'
+        }
+        resources {
+            srcDirs = ['src', '.']
+            include 'messages_*.properties'
+            include 'version.json'
+            include 'LICENSE'
+            exclude '**/*.java'
+            exclude '**/*.class'
+            exclude 'out/**'
+            exclude '**/*.jar'
+            exclude '**/__MACOSX/**'
+        }
+    }
+}
+
+application {
+    mainClassName = 'com.github._848488489_ff.mcpack_deobfuscator.McpackDeobfuscator'
+}
+
+jar {
+    archiveName = 'mcpack-deobfuscator.jar'
+    manifest {
+        attributes 'Main-Class': 'com.github._848488489_ff.mcpack_deobfuscator.McpackDeobfuscator'
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}

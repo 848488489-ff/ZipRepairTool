@@ -156,8 +156,10 @@
 
 需要 JDK 8 或更高版本。
 
-- Windows：`build.bat`
-- Linux / macOS：`./build.sh`
+- Windows：`gradlew.bat build`
+- Linux / macOS：`./gradlew build`
+
+产物：`build/libs/mcpack-deobfuscator.jar`。已含 Gradle wrapper，无需单独安装 Gradle。
 
 ## 许可证
 
