@@ -529,7 +529,7 @@ public class McpackDeobfuscator extends JFrame {
                     new SwingWorker<CheckEngine.CheckResult, String>() {
                 @Override
                 protected CheckEngine.CheckResult doInBackground() throws Exception {
-                    return CheckEngine.check(input, langAtStart);
+                    return CheckEngine.check(input, langAtStart, CheckOptions.defaults());
                 }
 
                 @Override
@@ -1209,11 +1209,25 @@ public class McpackDeobfuscator extends JFrame {
         }
         if (args.length >= 1 && "-check".equals(args[0])) {
             if (args.length < 2) {
-                System.err.println("usage: -check <in.zip>");
+                System.err.println("usage: -check <in.zip> [--config <file>]");
                 System.exit(2);
             }
             requireInput(Paths.get(args[1]));
-            runCliCheck(Paths.get(args[1]));
+            CheckOptions opts = CheckOptions.defaults();
+            for (int i = 2; i < args.length; i++) {
+                if ("--config".equals(args[i]) && i + 1 < args.length) {
+                    opts = CheckConfig.load(Paths.get(args[++i]));
+                }
+            }
+            runCliCheck(Paths.get(args[1]), opts);
+            return true;
+        }
+        if (args.length >= 1 && "-check-config".equals(args[0])) {
+            if (args.length < 2) {
+                System.err.println("usage: -check-config <file>");
+                System.exit(2);
+            }
+            runCliCheckConfig(Paths.get(args[1]));
             return true;
         }
         if (args.length >= 1 && "-obfuscate".equals(args[0])) {
@@ -1259,10 +1273,34 @@ public class McpackDeobfuscator extends JFrame {
         System.out.println("findings: " + (findings.isEmpty() ? "none" : findings));
     }
 
+    /** Check a check-configuration file itself (not an archive). */
+    private static void runCliCheckConfig(final Path cfg) {
+        java.util.List<String> problems = CheckConfig.validate(cfg);
+        if (problems.isEmpty()) {
+            CheckOptions opts = null;
+            try {
+                opts = CheckConfig.load(cfg);
+            } catch (CheckConfig.ConfigException e) {
+                System.err.println("invalid check configuration file: " + cfg.toAbsolutePath());
+                System.err.println("  - " + e.getMessage());
+                System.exit(1);
+                return;
+            }
+            System.out.println("OK: valid check configuration file: " + cfg.toAbsolutePath());
+            System.out.println(CheckConfig.describe(opts));
+        } else {
+            System.err.println("invalid check configuration file: " + cfg.toAbsolutePath());
+            for (String p : problems) {
+                System.err.println("  - " + p);
+            }
+            System.exit(1);
+        }
+    }
+
     /** Command-line check entry point. */
-    private static void runCliCheck(final Path input) throws Exception {
+    private static void runCliCheck(final Path input, CheckOptions opts) throws Exception {
         long t0 = System.nanoTime();
-        CheckEngine.CheckResult r = CheckEngine.check(input, Lang.EN);
+        CheckEngine.CheckResult r = CheckEngine.check(input, Lang.EN, opts);
         double sec = (System.nanoTime() - t0) / 1e9;
         System.out.println("verdict: " + r.verdictKey);
         System.out.println("entries=" + r.entryCount
@@ -1427,7 +1465,8 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  java -jar mcpack-deobfuscator.jar -help                   Show this help (about)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -version                Show version");
             System.out.println("  java -jar mcpack-deobfuscator.jar -update                 Check for updates (GitHub API, no token)");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip>         Inspect an archive");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip> [--config <file>]   Inspect an archive (optional config)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check-config <file>       Validate a check-configuration file");
             System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>   Deobfuscate a protected resource pack");
             System.out.println("  java -jar mcpack-deobfuscator.jar -detect <in.zip>        Detect PackSquash obfuscation");
             System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> [options]   Re-apply obfuscation");

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version 1.2.1"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="Version 1.2.2"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="License: Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build passing">
@@ -165,6 +165,33 @@ contents, so the extracted files actually open:
 
 After deobfuscate, a re-check reports `check.ok` with every obfuscation counter at
 zero.
+
+## Optional check configuration file (never required)
+
+`-check` can run with **no configuration at all** (every check enabled). Optionally pass `--config <file>`; a simple UTF-8 `key=value` **`.properties`** file (no JSON schema, no required keys, `#`/`!` comments, blank lines ignored) overrides individual checks. **A configuration file is never required** — pure CLI still works.
+
+    java -jar mcpack-deobfuscator.jar -check pack.zip
+    java -jar mcpack-deobfuscator.jar -check pack.zip --config check.properties
+
+`check.properties` (all keys optional, default `true`; `check.strict` default `false`):
+
+    check.metadata=true      # local/central name, size, CRC-field divergence
+    check.crc=true           # data CRC-32 verification
+    check.fake-dirs=true     # real files disguised as directories
+    check.forged-eocd=true   # forged EOCD signature at offset 0
+    check.packsquash=true    # PackSquash content-obfuscation detection
+    check.png=true           # PNG content-obfuscation scan
+    check.ogg=true           # Ogg content-obfuscation scan
+    check.json=true          # JSON-minified scan
+    check.strict=false       # any finding => damaged verdict
+
+### Check the configuration file itself
+
+Validate a configuration file (without checking an archive). Rejects missing file, UTF-8 BOM, malformed UTF-8, U+FFFD, `key=value` violations, duplicate keys, **unknown keys**, invalid booleans; prints effective settings on success:
+
+    java -jar mcpack-deobfuscator.jar -check-config check.properties
+
+This checkable configuration is *added*; nothing forces you to use it. (Inspired by `java-deobfuscator`'s selectable transformers, but **simpler and not a required `--config`**.)
 
 ## Build
 

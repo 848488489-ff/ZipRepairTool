@@ -83,7 +83,21 @@ public final class CheckEngine {
      * @throws IOException if the file cannot be read
      */
     public static CheckResult check(Path input, Lang lang) throws IOException {
+        return check(input, lang, CheckOptions.defaults());
+    }
+
+/**
+     * Run a full check on an archive with explicit {@link CheckOptions}.
+     *
+     * @param opts which checks to run (null = {@link CheckOptions#defaults()});
+     *             no configuration file is required
+     */
+    public static CheckResult check(Path input, Lang lang, CheckOptions opts) throws IOException {
         CheckResult r = new CheckResult();
+        if (opts == null) {
+            opts = CheckOptions.defaults();
+        }
+        final CheckOptions o = opts;
 
         // 1. Header / forged EOCD.
         byte[] head = new byte[4];
@@ -94,7 +108,9 @@ public final class CheckEngine {
         }
         if (head[0] == 'P' && head[1] == 'K' && head[2] == 5 && head[3] == 6) {
             r.forgedEocdAt0 = true;
-            r.details.add(Lang.tr(lang, "check.forgedeocd"));
+            if (o.forgedEocd) {
+                r.details.add(Lang.tr(lang, "check.forgedeocd"));
+            }
         }
 
         byte[] data = Files.readAllBytes(input);
@@ -212,16 +228,16 @@ public final class CheckEngine {
         // (some protected archives carry a stale count); report what we saw.
         r.entryCount = seen;
 
-        if (r.nameMismatch > 0) {
+        if (o.metadata && r.nameMismatch > 0) {
             r.details.add(Lang.tr(lang, "check.namemismatch", r.nameMismatch, join(nameSamples)));
         }
-        if (r.sizeMismatch > 0) {
+        if (o.metadata && r.sizeMismatch > 0) {
             r.details.add(Lang.tr(lang, "check.sizemismatch", r.sizeMismatch));
         }
-        if (r.crcFieldMismatch > 0) {
+        if (o.metadata && r.crcFieldMismatch > 0) {
             r.details.add(Lang.tr(lang, "check.crcfield", r.crcFieldMismatch));
         }
-        if (r.fakeDirs > 0) {
+        if (o.fakeDirs && r.fakeDirs > 0) {
             r.details.add(Lang.tr(lang, "check.fakedirs", r.fakeDirs, join(fakeSamples)));
         }
 
@@ -239,9 +255,9 @@ public final class CheckEngine {
                     continue;
                 }
                 String lname = e.getName().toLowerCase(Locale.ROOT);
-                boolean wantPng = lname.endsWith(".png");
-                boolean wantOgg = lname.endsWith(".ogg") || lname.endsWith(".oga");
-                boolean wantJson = lname.endsWith(".json") || lname.endsWith(".mcmeta");
+                boolean wantPng = o.png && lname.endsWith(".png");
+                boolean wantOgg = o.ogg && (lname.endsWith(".ogg") || lname.endsWith(".oga"));
+                boolean wantJson = o.json && (lname.endsWith(".json") || lname.endsWith(".mcmeta"));
                 try {
                     InputStream in = zf.getInputStream(e);
                     CRC32 crc = new CRC32();
@@ -264,7 +280,7 @@ public final class CheckEngine {
                         in.close();
                     }
                     long expected = e.getCrc();
-                    if (expected != -1 && crc.getValue() != expected) {
+                    if (o.crc && expected != -1 && crc.getValue() != expected) {
                         r.badCrc++;
                         // Content-obfuscation fingerprint: the local and central
                         // CRC fields agree with each other (both were XORed
@@ -307,8 +323,8 @@ public final class CheckEngine {
         }
 
         // 3b. Summarize content-obfuscation feature findings.
-        if (r.packSquashCrcFingerprint > 0 || r.packSquashPng > 0
-                || r.packSquashOgg > 0) {
+        if (o.packsquash && (r.packSquashCrcFingerprint > 0 || r.packSquashPng > 0
+                || r.packSquashOgg > 0)) {
             r.contentObfuscation = true;
             if (r.packSquashPng > 0) {
                 r.details.add(Lang.tr(lang, "check.packsquash.png",
@@ -328,15 +344,18 @@ public final class CheckEngine {
         // 4. Verdict. Protection features take precedence: a protected archive
         //    may legitimately be unreadable by strict validators (that is the
         //    point of protection), so it is reported as protected, not damaged.
-        boolean protection = r.nameMismatch > 0 || r.fakeDirs > 0
-                || r.forgedEocdAt0 || r.crcFieldMismatch > 0 || r.sizeMismatch > 0;
-        if (r.contentObfuscation) {
+        boolean protection = (o.metadata && (r.nameMismatch > 0 || r.sizeMismatch > 0 || r.crcFieldMismatch > 0))
+                || (o.fakeDirs && r.fakeDirs > 0)
+                || (o.forgedEocd && r.forgedEocdAt0);
+        if (o.packsquash && r.contentObfuscation) {
             r.verdictKey = "check.packsquash";
         } else if (protection) {
             r.verdictKey = "check.protected";
         } else if (!r.jvmReadable || r.unreadable > 0) {
             r.verdictKey = "check.damaged";
-        } else if (r.badCrc > 0) {
+        } else if (o.crc && r.badCrc > 0) {
+            r.verdictKey = "check.damaged";
+        } else if (o.strict && (protection || r.badCrc > 0 || r.unreadable > 0 || r.contentObfuscation)) {
             r.verdictKey = "check.damaged";
         } else {
             r.verdictKey = "check.ok";

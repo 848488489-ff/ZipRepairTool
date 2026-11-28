@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="版本 1.2.1"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="版本 1.2.2"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="许可证：Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="构建通过">
@@ -151,6 +151,33 @@
     content: pngFixed=676 oggFixed=6 jsonPrettified=125 nbtChecked=0 nbtBad=0
 
 反混淆后再次检查会得到 `check.ok`，所有混淆计数归零。
+
+## 可选「检查配置文件」（绝不强制必须用）
+
+`-check` **可以完全不用任何配置**（全部检查开启）。可选传 `--config <file>`；简单的 **UTF-8 `key=value` `.properties`** 文件（无需 JSON schema、无必填 key、支持 `#`/`!` 注释、空行忽略）可单独覆盖各项检查。**不强制必须用配置文件**——纯 CLI 照常可用。
+
+    java -jar mcpack-deobfuscator.jar -check pack.zip
+    java -jar mcpack-deobfuscator.jar -check pack.zip --config check.properties
+
+`check.properties`（所有 key 可选，默认 `true`；`check.strict` 默认 `false`）：
+
+    check.metadata=true      # 本地头/中央目录 名/大小/CRC 字段差异
+    check.crc=true           # 数据 CRC-32 校验
+    check.fake-dirs=true     # 真实文件伪装目录
+    check.forged-eocd=true   # 偏移 0 处伪造 EOCD 签名
+    check.packsquash=true    # PackSquash 内容混淆检测
+    check.png=true           # PNG 内容混淆扫描
+    check.ogg=true           # Ogg 内容混淆扫描
+    check.json=true          # JSON 压缩扫描
+    check.strict=false       # 任一发现 => 已损坏结论
+
+### 检查配置文件本身
+
+校验配置文件（不检查压缩包）。拒绝：文件不存在、UTF-8 BOM、非法 UTF-8、U+FFFD、`key=value` 格式违规、重复 key、**未知 key**、非法布尔；成功时打印生效设置：
+
+    java -jar mcpack-deobfuscator.jar -check-config check.properties
+
+这是**新增的可检查配置**；不会强迫你用它。（参考 `java-deobfuscator` 的可选 transformer，但**更简单，且不是强制 `--config`**。）
 
 ## 构建
 
