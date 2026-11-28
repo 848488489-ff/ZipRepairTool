@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.Random;
  *
  * <p>This is the inverse of {@link ContentRepairer}: given a clean PNG / Ogg /
  * JSON file, it produces exactly the form that {@link ContentRepairer}
- * restores. {@link TransformEngine} uses it when content-level corruption is
+ * restores. {@link ObfuscateEngine} uses it when content-level obfuscation is
  * enabled, so the archive stores files that a strict extractor would
  * additionally reject on the extracted data, while {@link RepairEngine} puts
  * them back together.
@@ -29,9 +29,9 @@ import java.util.Random;
  *       {@link ContentRepairer#prettifyJson} restores the layout.
  * </ul>
  */
-public final class ContentTransformer {
+public final class ContentObfuscator {
 
-    private ContentTransformer() {
+    private ContentObfuscator() {
     }
 
     // -----------------------------------------------------------------
@@ -39,14 +39,14 @@ public final class ContentTransformer {
     // -----------------------------------------------------------------
 
     /**
-     * Transform a PNG datastream: XOR a random key into every chunk CRC-32
+     * Obfuscate a PNG datastream: XOR a random key into every chunk CRC-32
      * and into the Adler-32 at the tail of the IDAT zlib stream.
      *
      * @param in  the clean PNG bytes
-     * @param rnd RNG used to derive the corruption key
-     * @return the corrupted bytes, or {@code in} if the input is not PNG
+     * @param rnd RNG used to derive the obfuscation key
+     * @return the obfuscated bytes, or {@code in} if the input is not PNG
      */
-    public static byte[] transformPng(byte[] in, Random rnd) {
+    public static byte[] obfuscatePng(byte[] in, Random rnd) {
         if (in == null || in.length < 33) {
             return in;
         }
@@ -106,14 +106,14 @@ public final class ContentTransformer {
     // -----------------------------------------------------------------
 
     /**
-     * Transform an Ogg Vorbis stream: first page serial +1, every granule
+     * Obfuscate an Ogg Vorbis stream: first page serial +1, every granule
      * mapped to {@code i64::MIN + granule}, Vorbis identification bitrate
      * fields forced to -1, page CRC-32s recomputed.
      *
      * @param in the clean Ogg bytes
-     * @return the corrupted bytes, or {@code in} if the input is not Ogg
+     * @return the obfuscated bytes, or {@code in} if the input is not Ogg
      */
-    public static byte[] transformOgg(byte[] in) {
+    public static byte[] obfuscateOgg(byte[] in) {
         if (in == null || in.length < 27 || !ContentRepairer.isOggPage(in, 0)) {
             return in;
         }

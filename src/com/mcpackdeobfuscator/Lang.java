@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.util.Locale;
 import java.util.MissingResourceException;

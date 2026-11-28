@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.zip.ZipOutputStream;
  * the central directory and reads the raw bytes at the recorded local header
  * offset, without validating that the local header metadata (file name, sizes,
  * general-purpose flags, external attributes) agrees with the central
- * directory. Many damaged archives exploit
+ * directory. Many deliberately "protected" or "encrypted" archives exploit
  * exactly this gap: they corrupt local header fields (file names, sizes,
  * fake directory markers, forged EOCD signatures) so that strict validators
  * such as 7-Zip, WinRAR, Windows Explorer or python's zipfile reject the file,
@@ -46,9 +46,9 @@ public final class RepairEngine {
         public int fakeDirs = 0;
         /** Total decompressed bytes written. */
         public long bytes = 0;
-        /** PNG files whose corrupted chunk CRC / Adler-32 was repaired. */
+        /** PNG files whose obfuscated chunk CRC / Adler-32 was repaired. */
         public int pngFixed = 0;
-        /** Ogg files whose corrupted headers were repaired. */
+        /** Ogg files whose obfuscated headers were repaired. */
         public int oggFixed = 0;
         /** JSON files re-formatted (prettified). */
         public int jsonPrettified = 0;
@@ -108,7 +108,7 @@ public final class RepairEngine {
     /**
      * Rebuild a clean ZIP archive from the input.
      *
-     * @param input    the corrupted archive
+     * @param input    the obfuscated archive
      * @param output   where to write the repaired archive (overwritten)
      * @param progress optional progress callback, may be null
      * @return the repair result
@@ -172,7 +172,7 @@ public final class RepairEngine {
 
     /**
      * Stream an entry to the output archive, applying content-level repair to
-     * known content-corrupted file types (PNG, Ogg Vorbis, JSON, NBT).
+     * known content-obfuscated file types (PNG, Ogg Vorbis, JSON, NBT).
      *
      * <p>Only the listed types are buffered and repaired; every other entry is
      * streamed through unchanged, so repair stays fast on large archives.

@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,9 +16,10 @@ import java.util.zip.Inflater;
  *
  * The ZIP metadata repair done by {@link RepairEngine} only rebuilds a
  * consistent ZIP container. It does not fix the *bytes of the stored files*.
- * Some damaged archives additionally have corrupt file contents, so that even
- * after the ZIP is rebuilt the extracted files still fail to open. This class
- * repairs those contents:
+ * Some protected resource packs (in particular those produced by a
+ * PackSquash content obfuscator) additionally corrupt file contents, so
+ * that even after the ZIP is rebuilt the extracted files still fail to open.
+ * This class repairs those contents:
  *
  * <ul>
  *   <li><b>PNG</b> - a random key was XORed into every chunk CRC-32 and into
@@ -48,9 +49,9 @@ public final class ContentRepairer {
     // -----------------------------------------------------------------
 
     /**
-     * Repair a PNG datastream whose chunk CRC-32 / IDAT Adler-32 were corrupted.
+     * Repair a PNG datastream whose chunk CRC-32 / IDAT Adler-32 were obfuscated.
      *
-     * @param in the (possibly corrupted) PNG bytes
+     * @param in the (possibly obfuscated) PNG bytes
      * @return the repaired bytes if anything was changed, otherwise {@code in}
      */
     public static byte[] fixPng(byte[] in) {
@@ -110,7 +111,7 @@ public final class ContentRepairer {
             } else {
                 // Multi-IDAT: the zlib stream spans several chunks. Only the
                 // tail of the *last* chunk holds the Adler-32; intermediate
-                // chunk tails are deflate bytes that may have been corrupted.
+                // chunk tails are deflate bytes that may have been obfuscated.
                 // Attempt the full-stream repair anyway.
                 int total = 0;
                 for (int[] c : idats) {
@@ -185,7 +186,7 @@ public final class ContentRepairer {
      * whose granule positions were mapped to {@code i64::MIN + granule} and
      * whose bitrate fields were forced to -1.
      *
-     * @param in the (possibly corrupted) Ogg bytes
+     * @param in the (possibly obfuscated) Ogg bytes
      * @return the repaired bytes if anything was changed, otherwise {@code in}
      */
     public static byte[] fixOgg(byte[] in) {
@@ -232,7 +233,7 @@ public final class ContentRepairer {
 
         // 2. Un-map granule positions: mangled = i64::MIN + original. A real
         //    Vorbis granule is a sample count (0..2^62 range, or -1 for "none"),
-        //    so a value outside [-2^62, +2^62] marks a corrupted page. The
+        //    so a value outside [-2^62, +2^62] marks a obfuscated page. The
         //    upper bound catches the wrapping case original == -1, which maps
         //    to a large positive value.
         for (int[] p : pages) {
@@ -303,11 +304,11 @@ public final class ContentRepairer {
     // -----------------------------------------------------------------
 
     /**
-     * True if the PNG datastream looks corrupted: at least one
-     * chunk CRC-32 does not match the chunk contents. A corrupted file's
+     * True if the PNG datastream looks obfuscated: at least one
+     * chunk CRC-32 does not match the chunk contents. A obfuscated file's
      * recomputed CRC never matches the stored one.
      */
-    public static boolean isPngCorrupted(byte[] in) {
+    public static boolean isPngObfuscated(byte[] in) {
         if (in == null || in.length < 33
                 || (in[0] & 0xff) != 0x89 || in[1] != 'P' || in[2] != 'N' || in[3] != 'G'
                 || in[4] != 0x0d || in[5] != 0x0a || in[6] != 0x1a || in[7] != 0x0a) {
@@ -335,11 +336,11 @@ public final class ContentRepairer {
     }
 
     /**
-     * True if the Ogg stream looks corrupted: a rewritten first
+     * True if the Ogg stream looks obfuscated: a rewritten first
      * page serial (first == second + 1), a granule mapped below -2^62, or
      * Vorbis identification bitrate fields forced to -1.
      */
-    public static boolean isOggCorrupted(byte[] in) {
+    public static boolean isOggObfuscated(byte[] in) {
         if (in == null || in.length < 27 || !isOggPage(in, 0)) {
             return false;
         }

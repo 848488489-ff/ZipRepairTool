@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,11 +18,11 @@ import java.util.zip.ZipFile;
  * Comprehensive integrity checker.
  *
  * Inspects an archive for two distinct classes of problems:
- *   - corruption (data that cannot be decompressed, CRC mismatches, unreadable
+ *   - obfuscation (data that cannot be decompressed, CRC mismatches, unreadable
  *     structure)
- *   - metadata divergence (deliberate mismatch between the central directory
- *     and the local file headers, fake directory entries, forged EOCD
- *     signatures) that makes strict extractors fail while the JVM
+ *   - protection / "encryption" (deliberate metadata divergence between the
+ *     central directory and the local file headers, fake directory entries,
+ *     forged EOCD signatures) that makes strict extractors fail while the JVM
  *     still reads the archive.
  *
  * The report is produced as localized detail lines plus a verdict key.
@@ -52,24 +52,25 @@ public final class CheckEngine {
         public int badCrc = 0;
         /** Entries that could not be decompressed at all. */
         public int unreadable = 0;
-        /** Content-corruption fingerprint: entries whose local and central
+        /** Content-obfuscation fingerprint: entries whose local and central
          *  CRC fields match each other but both disagree with the real data
-         *  CRC. This is characteristic of content corruption, which XORs a
+         *  CRC. This is characteristic of content obfuscation, which XORs a
          *  single key into both fields. */
-        public int contentCorruptionCrcFingerprint = 0;
+        public int packSquashCrcFingerprint = 0;
         /** PNG files whose chunk CRC-32 does not match their contents. */
-        public int contentCorruptionPng = 0;
-        /** Ogg files with corrupted headers (serial / granule / bitrate). */
-        public int contentCorruptionOgg = 0;
+        public int packSquashPng = 0;
+        /** Ogg files with obfuscated headers (serial / granule / bitrate). */
+        public int packSquashOgg = 0;
         /** JSON files that appear minified (no line breaks). */
-        public int contentCorruptionJson = 0;
-        /** Sample name of an corrupted PNG, for the report. */
-        public String contentCorruptionPngSample = "";
-        /** True if content-corruption features were detected. */
-        public boolean contentCorruption = false;
+        public int packSquashJson = 0;
+        /** Sample name of an obfuscated PNG, for the report. */
+        public String packSquashPngSample = "";
+        /** True if content-obfuscation features were detected. */
+        public boolean contentObfuscation = false;
         /** Localized detail lines (a summary per anomaly class). */
         public final List<String> details = new ArrayList<String>();
-        /** Verdict key: check.ok / check.damaged. */
+        /** Verdict key: check.ok / check.protected / check.damaged /
+         *  check.packsquash. */
         public String verdictKey = "check.ok";
     }
 
@@ -106,7 +107,7 @@ public final class CheckEngine {
         int cdOff = u32(data, eocd + 16);
         int cdSize = u32(data, eocd + 12);
         int count = u16(data, eocd + 10);
-        // Smart correction: some damaged archives store the central-directory
+        // Smart correction: some protected archives store the central-directory
         // signature a few bytes away from the recorded cdOff. Snap cdOff to the
         // real signature so the traversal below and the metadata comparison stay
         // accurate, and shrink cdSize by the same offset.
@@ -156,7 +157,7 @@ public final class CheckEngine {
             localCrcMatchesCentral.add(Boolean.FALSE);
 
             // Smart local-header location: the recorded offset may be a few
-            // bytes off (some damaged archives carry a small prefix before
+            // bytes off (some protected archives carry a small prefix before
             // the local header too), so accept the PK\x03\x04 signature within
             // ±8 bytes of the recorded offset.
             int lhoPos = localSigPos(data, lho);
@@ -208,7 +209,7 @@ public final class CheckEngine {
             p += 46 + nlen + elen + clen;
         }
         // The EOCD entry count may be larger than the records actually present
-        // (some damaged archives carry a stale count); report what we saw.
+        // (some protected archives carry a stale count); report what we saw.
         r.entryCount = seen;
 
         if (r.nameMismatch > 0) {
@@ -225,7 +226,7 @@ public final class CheckEngine {
         }
 
         // 3. Data integrity: decompress each entry and verify the CRC-32, and
-        //    scan a sample of PNG / Ogg / JSON entries for content-corruption
+        //    scan a sample of PNG / Ogg / JSON entries for content-obfuscation
         //    features.
         try (ZipFile zf = new ZipFile(input.toFile())) {
             r.jvmReadable = true;
@@ -265,31 +266,31 @@ public final class CheckEngine {
                     long expected = e.getCrc();
                     if (expected != -1 && crc.getValue() != expected) {
                         r.badCrc++;
-                        // Content-corruption fingerprint: the local and central
+                        // Content-obfuscation fingerprint: the local and central
                         // CRC fields agree with each other (both were XORed
                         // with the same key) but disagree with the real data
                         // CRC.
                         if (idx - 1 < localCrcMatchesCentral.size()
                                 && localCrcMatchesCentral.get(idx - 1)) {
-                            r.contentCorruptionCrcFingerprint++;
+                            r.packSquashCrcFingerprint++;
                         }
                     }
                     if (bufKeep != null) {
                         byte[] d = bufKeep.toByteArray();
                         if (wantPng) {
-                            if (ContentRepairer.isPngCorrupted(d)) {
-                                r.contentCorruptionPng++;
-                                if (r.contentCorruptionPngSample.isEmpty()) {
-                                    r.contentCorruptionPngSample = e.getName();
+                            if (ContentRepairer.isPngObfuscated(d)) {
+                                r.packSquashPng++;
+                                if (r.packSquashPngSample.isEmpty()) {
+                                    r.packSquashPngSample = e.getName();
                                 }
                             }
                         } else if (wantOgg) {
-                            if (ContentRepairer.isOggCorrupted(d)) {
-                                r.contentCorruptionOgg++;
+                            if (ContentRepairer.isOggObfuscated(d)) {
+                                r.packSquashOgg++;
                             }
                         } else if (wantJson) {
                             if (isMinifiedJson(d)) {
-                                r.contentCorruptionJson++;
+                                r.packSquashJson++;
                             }
                         }
                     }
@@ -305,32 +306,34 @@ public final class CheckEngine {
             r.details.add(Lang.tr(lang, "check.notzip", ze.getMessage()));
         }
 
-        // 3b. Summarize content-corruption feature findings.
-        if (r.contentCorruptionCrcFingerprint > 0 || r.contentCorruptionPng > 0
-                || r.contentCorruptionOgg > 0) {
-            r.contentCorruption = true;
-            if (r.contentCorruptionPng > 0) {
-                r.details.add(Lang.tr(lang, "check.corrupted.png",
-                        r.contentCorruptionPng, r.contentCorruptionPngSample));
+        // 3b. Summarize content-obfuscation feature findings.
+        if (r.packSquashCrcFingerprint > 0 || r.packSquashPng > 0
+                || r.packSquashOgg > 0) {
+            r.contentObfuscation = true;
+            if (r.packSquashPng > 0) {
+                r.details.add(Lang.tr(lang, "check.packsquash.png",
+                        r.packSquashPng, r.packSquashPngSample));
             }
-            if (r.contentCorruptionOgg > 0) {
-                r.details.add(Lang.tr(lang, "check.corrupted.ogg", r.contentCorruptionOgg));
+            if (r.packSquashOgg > 0) {
+                r.details.add(Lang.tr(lang, "check.packsquash.ogg", r.packSquashOgg));
             }
-            if (r.contentCorruptionCrcFingerprint > 0) {
-                r.details.add(Lang.tr(lang, "check.corrupted.crc", r.contentCorruptionCrcFingerprint));
+            if (r.packSquashCrcFingerprint > 0) {
+                r.details.add(Lang.tr(lang, "check.packsquash.crc", r.packSquashCrcFingerprint));
             }
-            if (r.contentCorruptionJson > 0) {
-                r.details.add(Lang.tr(lang, "check.corrupted.json", r.contentCorruptionJson));
+            if (r.packSquashJson > 0) {
+                r.details.add(Lang.tr(lang, "check.packsquash.json", r.packSquashJson));
             }
         }
 
-        // 4. Verdict. Any inconsistency is reported as damaged.
-        boolean transformation = r.nameMismatch > 0 || r.fakeDirs > 0
+        // 4. Verdict. Protection features take precedence: a protected archive
+        //    may legitimately be unreadable by strict validators (that is the
+        //    point of protection), so it is reported as protected, not damaged.
+        boolean protection = r.nameMismatch > 0 || r.fakeDirs > 0
                 || r.forgedEocdAt0 || r.crcFieldMismatch > 0 || r.sizeMismatch > 0;
-        if (r.contentCorruption) {
-            r.verdictKey = "check.damaged";
-        } else if (transformation) {
-            r.verdictKey = "check.damaged";
+        if (r.contentObfuscation) {
+            r.verdictKey = "check.packsquash";
+        } else if (protection) {
+            r.verdictKey = "check.protected";
         } else if (!r.jvmReadable || r.unreadable > 0) {
             r.verdictKey = "check.damaged";
         } else if (r.badCrc > 0) {
@@ -393,7 +396,7 @@ public final class CheckEngine {
                     continue;
                 }
                 // A central-directory signature within a few bytes of cdOff
-                // also counts: some damaged archives carry a small prefix
+                // also counts: some protected archives carry a small prefix
                 // right before the central directory, so the exact signature
                 // is not always at cdOff.
                 if (cdSize == 0 || cdSignatureNear(b, (int) cdOff)) {

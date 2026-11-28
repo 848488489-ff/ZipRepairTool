@@ -8,7 +8,7 @@ violates these rules is void and must be reverted.
 1. **The maintainer owns the version number.** An agent must never decide the
    version number, tag name, or release contents on its own.
 2. **When the maintainer explicitly asks to release**, the agent may update
-   `ZipRepairTool.VERSION` to the specified version, build, commit, create the
+   `version.json` to the specified version, build, commit, create the
    annotated tag, cut the GitHub Release, and upload the JAR — but only with
    the version number the maintainer gave.
 3. **Never release without an explicit maintainer request.** Do not bump the

@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Transformation engine - the inverse of RepairEngine.
+ * Obfuscation engine - the inverse of RepairEngine.
  *
  * Produces a ZIP whose local file headers disagree with the central directory
  * in a way that JVM-based readers tolerate but strict extractors (7-Zip,
@@ -27,18 +27,18 @@ import java.util.zip.ZipOutputStream;
  * local header names) still reads every byte, while strict validators abort on
  * the mismatch.
  *
- * The exact behavior is driven by {@link TransformOptions}, a tunable set of
+ * The exact behavior is driven by {@link ObfuscateOptions}, a tunable set of
  * parameters (name rewrite mode, percentage, forged EOCD, CRC perturbation,
  * RNG seed). Named {@link Preset}s are quick shortcuts for common
  * configurations.
  */
-public final class TransformEngine {
+public final class ObfuscateEngine {
 
-    private TransformEngine() {
+    private ObfuscateEngine() {
     }
 
-    /** Tunable transformation parameters (the "bunch of parameters"). */
-    public static class TransformOptions {
+    /** Tunable protection parameters (the "bunch of parameters"). */
+    public static class ObfuscateOptions {
 
         /** How to rewrite the file name stored in a local file header. */
         public enum NameMode {
@@ -66,33 +66,33 @@ public final class TransformEngine {
         public boolean perturbSizes = true;
         /** Randomize CRC-32 fields (local header + central directory). */
         public boolean perturbCrc = false;
-        /** Transform the file contents of PNG entries. */
-        public boolean transformPng = false;
-        /** Transform the file contents of Ogg / Oga entries. */
-        public boolean transformOgg = false;
+        /** Obfuscate the file contents of PNG entries. */
+        public boolean obfuscatePng = false;
+        /** Obfuscate the file contents of Ogg / Oga entries. */
+        public boolean obfuscateOgg = false;
         /** Minify JSON / mcmeta / jsonc / jem / jpm entries. */
-        public boolean transformJson = false;
+        public boolean obfuscateJson = false;
         /** RNG seed for reproducible output. */
         public long seed = 0x5EEDL;
-        /** Entry names (or path prefixes) left untouched by transformation. */
+        /** Entry names (or path prefixes) left untouched by protection. */
         public final List<String> whitelist = new ArrayList<String>();
 
-        /** True if any content-corruption type is enabled. */
+        /** True if any content-obfuscation type is enabled. */
         public boolean anyContent() {
-            return transformPng || transformOgg || transformJson;
+            return obfuscatePng || obfuscateOgg || obfuscateJson;
         }
     }
 
-    /** Outcome of a transformation run. */
-    public static final class TransformResult {
+    /** Outcome of a protection run. */
+    public static final class ObfuscateResult {
         /** Entries written. */
         public int entries = 0;
         /** Entries whose local header name was rewritten. */
         public int modified = 0;
-        /** PNG files whose chunk CRC / IDAT Adler-32 was corrupted. */
-        public int pngTransformed = 0;
-        /** Ogg files whose headers were corrupted. */
-        public int oggTransformed = 0;
+        /** PNG files whose chunk CRC / IDAT Adler-32 was obfuscated. */
+        public int pngObfuscated = 0;
+        /** Ogg files whose headers were obfuscated. */
+        public int oggObfuscated = 0;
         /** JSON files that were minified. */
         public int jsonMinified = 0;
         /** Total bytes of the transformed archive. */
@@ -101,8 +101,8 @@ public final class TransformEngine {
         public final List<String> missingWhitelist = new ArrayList<String>();
     }
 
-    /** Transform using explicit tunable options. */
-    public static TransformResult transform(Path input, Path output, TransformOptions opts) throws IOException {
+    /** Obfuscate using explicit tunable options. */
+    public static ObfuscateResult obfuscate(Path input, Path output, ObfuscateOptions opts) throws IOException {
         // 1. Read every entry of the source into memory.
         List<String> names = new ArrayList<String>();
         List<byte[]> datas = new ArrayList<byte[]>();
@@ -154,7 +154,7 @@ public final class TransformEngine {
         }
 
         // 2. Emit a fully consistent ZIP into memory. When content
-        //    corruption is enabled, PNG / Ogg / JSON entries are corrupted
+        //    obfuscation is enabled, PNG / Ogg / JSON entries are obfuscated
         //    on the fly; ZipOutputStream recomputes the metadata so the
         //    container stays internally consistent and only the stored file
         //    bytes differ. The content RNG is seeded independently so the
@@ -167,7 +167,7 @@ public final class TransformEngine {
                 String name = names.get(i);
                 byte[] d = datas.get(i);
                 if (opts.anyContent() && !isWhitelisted(name, opts.whitelist)) {
-                    d = transformContent(name, d, contentRnd, obfCount, opts);
+                    d = obfuscateContent(name, d, contentRnd, obfCount, opts);
                 }
                 ZipEntry e = new ZipEntry(name);
                 zos.putNextEntry(e);
@@ -183,7 +183,7 @@ public final class TransformEngine {
 
         // 3a. ZipOutputStream emits entries with a data descriptor, which makes
         //     the local header size fields zero. Strict extractors skip the
-        //     size check in that case, which would defeat the transformation, so
+        //     size check in that case, which would defeat the protection, so
         //     backfill the real values into every local header and clear the
         //     descriptor flag. The JVM keeps reading via the local header
         //     values, so the archive still opens in Java applications.
@@ -205,7 +205,7 @@ public final class TransformEngine {
 
             if (!wl && lho + 30 <= b.length && isLocalSig(b, (int) lho)) {
                 int lnlen = u16(b, (int) lho + 26);
-                boolean doName = opts.nameMode != TransformOptions.NameMode.NONE
+                boolean doName = opts.nameMode != ObfuscateOptions.NameMode.NONE
                         && rnd.nextInt(100) < opts.namePercent;
                 if (doName) {
                     for (int k = 0; k < lnlen; k++) {
@@ -243,44 +243,44 @@ public final class TransformEngine {
         }
 
         Files.write(output, b);
-        TransformResult r = new TransformResult();
+        ObfuscateResult r = new ObfuscateResult();
         r.entries = count;
         r.modified = modified;
-        r.pngTransformed = obfCount[0];
-        r.oggTransformed = obfCount[1];
+        r.pngObfuscated = obfCount[0];
+        r.oggObfuscated = obfCount[1];
         r.jsonMinified = obfCount[2];
         r.bytes = b.length;
         return r;
     }
 
     /**
-     * Apply content corruption to a single entry when it is a known file
+     * Apply content obfuscation to a single entry when it is a known file
      * type (PNG / Ogg / JSON). Returns the (possibly new) bytes; {@code count}
      * is a 3-element {png, ogg, json} counter incremented on change.
      */
-    private static byte[] transformContent(String name, byte[] data, Random rnd,
-            int[] count, TransformOptions opts) {
+    private static byte[] obfuscateContent(String name, byte[] data, Random rnd,
+            int[] count, ObfuscateOptions opts) {
         String lower = name.toLowerCase(java.util.Locale.ROOT);
-        if (opts.transformPng && lower.endsWith(".png")) {
-            byte[] o = ContentTransformer.transformPng(data, rnd);
+        if (opts.obfuscatePng && lower.endsWith(".png")) {
+            byte[] o = ContentObfuscator.obfuscatePng(data, rnd);
             if (o != data) {
                 count[0]++;
                 return o;
             }
             return data;
         }
-        if (opts.transformOgg && (lower.endsWith(".ogg") || lower.endsWith(".oga"))) {
-            byte[] o = ContentTransformer.transformOgg(data);
+        if (opts.obfuscateOgg && (lower.endsWith(".ogg") || lower.endsWith(".oga"))) {
+            byte[] o = ContentObfuscator.obfuscateOgg(data);
             if (o != data) {
                 count[1]++;
                 return o;
             }
             return data;
         }
-        if (opts.transformJson && (lower.endsWith(".json") || lower.endsWith(".mcmeta")
+        if (opts.obfuscateJson && (lower.endsWith(".json") || lower.endsWith(".mcmeta")
                 || lower.endsWith(".jsonc") || lower.endsWith(".mcmetac")
                 || lower.endsWith(".jem") || lower.endsWith(".jpm"))) {
-            byte[] o = ContentTransformer.minifyJson(data);
+            byte[] o = ContentObfuscator.minifyJson(data);
             if (o != data) {
                 count[2]++;
                 return o;
@@ -381,22 +381,22 @@ public final class TransformEngine {
     }
 
     /** Rewrite a single name byte according to the requested mode. */
-    private static byte mutate(byte c, TransformOptions.NameMode mode, Random rnd) {
+    private static byte mutate(byte c, ObfuscateOptions.NameMode mode, Random rnd) {
         int v = c & 0xff;
-        if (mode == TransformOptions.NameMode.UPPER
-                || mode == TransformOptions.NameMode.DIGIT
-                || mode == TransformOptions.NameMode.RANDOM) {
+        if (mode == ObfuscateOptions.NameMode.UPPER
+                || mode == ObfuscateOptions.NameMode.DIGIT
+                || mode == ObfuscateOptions.NameMode.RANDOM) {
             if (v >= 'a' && v <= 'z') {
                 v = v - 'a' + 'A';
             }
         }
-        if (mode == TransformOptions.NameMode.DIGIT
-                || mode == TransformOptions.NameMode.RANDOM) {
+        if (mode == ObfuscateOptions.NameMode.DIGIT
+                || mode == ObfuscateOptions.NameMode.RANDOM) {
             if (v >= '0' && v <= '9') {
                 v = '0' + ((v - '0' + 1) % 10);
             }
         }
-        if (mode == TransformOptions.NameMode.RANDOM) {
+        if (mode == ObfuscateOptions.NameMode.RANDOM) {
             if (v >= 'A' && v <= 'Z') {
                 v = 'A' + rnd.nextInt(26);
             }

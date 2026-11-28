@@ -4,12 +4,12 @@
 // Release from the API. The static version text in the HTML is only a last
 // fallback shown when both are unreachable.
 (function () {
-  var repo = '848488489-ff/ZipRepairTool';
+  var repo = '848488489-ff/mcpack-deobfuscator';
   var api = 'https://api.github.com/repos/' + repo + '/releases/latest';
 
   function apply(tag) {
     if (!tag) { return; }
-    var dl = 'https://github.com/' + repo + '/releases/download/' + tag + '/ZipRepairTool.jar';
+    var dl = 'https://github.com/' + repo + '/releases/download/' + tag + '/mcpack-deobfuscator.jar';
     var links = document.querySelectorAll('[data-download]');
     for (var i = 0; i < links.length; i++) {
       links[i].href = dl;

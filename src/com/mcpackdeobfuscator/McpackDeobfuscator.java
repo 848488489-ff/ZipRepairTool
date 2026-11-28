@@ -1,4 +1,4 @@
-package com.ziptool;
+package com.mcpackdeobfuscator;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
@@ -61,21 +61,21 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 /**
  * Zip Repair Tool - GUI and command-line front end.
  *
- * The GUI has two areas: Repair and Transform (Encrypt). The Transform area offers
+ * The GUI has two areas: Repair and Obfuscate (Encrypt). The Obfuscate area offers
  * a set of tunable parameters (name rewrite mode, percentage, forged EOCD,
  * CRC perturbation, RNG seed) on top of named presets.
  *
  * Without arguments the Swing GUI is shown. Command-line modes:
- *   java -jar ZipRepairTool.jar -repair <in.zip> <out.zip>
- *   java -jar ZipRepairTool.jar -detect <in.zip>
- *   java -jar ZipRepairTool.jar -transform <in.zip> <out.zip> <preset>
+ *   java -jar mcpack-deobfuscator.jar -repair <in.zip> <out.zip>
+ *   java -jar mcpack-deobfuscator.jar -detect <in.zip>
+ *   java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> <preset>
  *       [--name <none|upper|digit|random>] [--percent <0-100>]
  *       [--eocd] [--crc] [--seed <n>]
  *
  * All user-visible strings are localized (EN / ZH, AUTO follows the system
  * locale); source comments stay in English.
  */
-public class ZipRepairTool extends JFrame {
+public class McpackDeobfuscator extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
@@ -83,7 +83,7 @@ public class ZipRepairTool extends JFrame {
     public static final String VERSION = loadMeta("version", "0.0.0");
 
     /** Project repository URL (shown in the About dialog and CLI). */
-    public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/ZipRepairTool");
+    public static final String GITHUB_URL = loadMeta("repo", "https://github.com/848488489-ff/McpackDeobfuscator");
 
     /**
      * Read a string value from the bundled {@code /version.json} resource.
@@ -92,7 +92,7 @@ public class ZipRepairTool extends JFrame {
      * malformed.
      */
     private static String loadMeta(String key, String fallback) {
-        try (InputStream in = ZipRepairTool.class.getResourceAsStream("/version.json")) {
+        try (InputStream in = McpackDeobfuscator.class.getResourceAsStream("/version.json")) {
             if (in == null) {
                 return fallback;
             }
@@ -109,7 +109,7 @@ public class ZipRepairTool extends JFrame {
      * {@code <key>} (English) field. {@code zh=false} always uses {@code <key>}.
      */
     private static String loadMetaLang(String key, boolean zh, String fallback) {
-        try (InputStream in = ZipRepairTool.class.getResourceAsStream("/version.json")) {
+        try (InputStream in = McpackDeobfuscator.class.getResourceAsStream("/version.json")) {
             if (in == null) {
                 return fallback;
             }
@@ -168,7 +168,7 @@ public class ZipRepairTool extends JFrame {
     private final JTabbedPane tabs = new JTabbedPane();
     private final CheckPanel checkPanel = new CheckPanel();
     private final RepairPanel repairPanel = new RepairPanel();
-    private final TransformPanel transformPanel = new TransformPanel();
+    private final ObfuscatePanel obfuscatePanel = new ObfuscatePanel();
     private final JProgressBar progressBar = new JProgressBar(0, 100);
     private final JLabel statusLabel = new JLabel();
     private final JMenu helpMenu = new JMenu();
@@ -177,7 +177,7 @@ public class ZipRepairTool extends JFrame {
     /** Currently selected language mode. */
     private Lang mode = Lang.AUTO;
 
-    public ZipRepairTool() {
+    public McpackDeobfuscator() {
         super();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(760, 620));
@@ -200,7 +200,7 @@ public class ZipRepairTool extends JFrame {
 
         tabs.addTab("", checkPanel);
         tabs.addTab("", repairPanel);
-        tabs.addTab("", transformPanel);
+        tabs.addTab("", obfuscatePanel);
 
         // Bottom: progress + status.
         JPanel bottom = new JPanel(new BorderLayout(8, 4));
@@ -291,12 +291,12 @@ public class ZipRepairTool extends JFrame {
         ((JLabel) ((JPanel) getContentPane().getComponent(0)).getComponent(0)).setText(tr("lang.label"));
         tabs.setTitleAt(0, tr("tab.check"));
         tabs.setTitleAt(1, tr("tab.repair"));
-        tabs.setTitleAt(2, tr("tab.transform"));
+        tabs.setTitleAt(2, tr("tab.obfuscate"));
         helpMenu.setText(tr("menu.help"));
         aboutItem.setText(tr("menu.about"));
         checkPanel.refresh();
         repairPanel.refresh();
-        transformPanel.refresh();
+        obfuscatePanel.refresh();
         statusLabel.setText(tr("status.ready"));
     }
 
@@ -311,7 +311,7 @@ public class ZipRepairTool extends JFrame {
     private void setBusy(boolean busy) {
         checkPanel.setEnabledAll(!busy);
         repairPanel.setEnabledAll(!busy);
-        transformPanel.setEnabledAll(!busy);
+        obfuscatePanel.setEnabledAll(!busy);
         setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR)
                 : Cursor.getDefaultCursor());
     }
@@ -458,7 +458,7 @@ public class ZipRepairTool extends JFrame {
         private void startCheck() {
             final String in = inputField.getText().trim();
             if (in.isEmpty()) {
-                JOptionPane.showMessageDialog(ZipRepairTool.this, tr("error.paths"),
+                JOptionPane.showMessageDialog(McpackDeobfuscator.this, tr("error.paths"),
                         tr("app.title"), JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -625,7 +625,7 @@ public class ZipRepairTool extends JFrame {
             final String in = inputField.getText().trim();
             final String out = outputField.getText().trim();
             if (in.isEmpty() || out.isEmpty()) {
-                JOptionPane.showMessageDialog(ZipRepairTool.this, tr("error.paths"),
+                JOptionPane.showMessageDialog(McpackDeobfuscator.this, tr("error.paths"),
                         tr("app.title"), JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -700,22 +700,22 @@ public class ZipRepairTool extends JFrame {
     }
 
     // -----------------------------------------------------------------
-    // Transform area.
+    // Obfuscate area.
     // -----------------------------------------------------------------
 
-    private class TransformPanel extends JPanel implements Refreshable {
+    private class ObfuscatePanel extends JPanel implements Refreshable {
         private static final long serialVersionUID = 1L;
 
         private final JTextField inputField = new JTextField(38);
         private final JTextField outputField = new JTextField(38);
         private final JButton browseIn = new JButton();
         private final JButton browseOut = new JButton();
-        private final JButton transformBtn = new JButton();
+        private final JButton obfuscateBtn = new JButton();
         private final JTextArea logArea = new JTextArea();
 
-        private final JComboBox<TransformEngine.TransformOptions.NameMode> nameModeBox =
-                new JComboBox<TransformEngine.TransformOptions.NameMode>(
-                        TransformEngine.TransformOptions.NameMode.values());
+        private final JComboBox<ObfuscateEngine.ObfuscateOptions.NameMode> nameModeBox =
+                new JComboBox<ObfuscateEngine.ObfuscateOptions.NameMode>(
+                        ObfuscateEngine.ObfuscateOptions.NameMode.values());
         private final JSlider percentSlider = new JSlider(0, 100, 100);
         private final JLabel percentLabel = new JLabel("100%");
         private final JSlider dirPercentSlider = new JSlider(0, 100, 0);
@@ -739,7 +739,7 @@ public class ZipRepairTool extends JFrame {
         private final JLabel seedLabel = new JLabel("seed.label");
         private final JLabel whitelistLabel = new JLabel("whitelist.label");
 
-        TransformPanel() {
+        ObfuscatePanel() {
             setLayout(new BorderLayout());
 
             JPanel form = new JPanel(new GridBagLayout());
@@ -856,7 +856,7 @@ public class ZipRepairTool extends JFrame {
             add(scroll, BorderLayout.CENTER);
 
             JPanel south = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
-            south.add(transformBtn);
+            south.add(obfuscateBtn);
             add(south, BorderLayout.SOUTH);
 
             installDrop(this, inputField);
@@ -870,9 +870,9 @@ public class ZipRepairTool extends JFrame {
                     choose(outputField, true);
                 }
             });
-            transformBtn.addActionListener(new ActionListener() {
+            obfuscateBtn.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    startTransform();
+                    startObfuscate();
                 }
             });
 
@@ -888,18 +888,18 @@ public class ZipRepairTool extends JFrame {
             });
         }
 
-        /** Build TransformOptions from the current control state. */
-        private TransformEngine.TransformOptions readOptions() {
-            TransformEngine.TransformOptions o = new TransformEngine.TransformOptions();
-            o.nameMode = (TransformEngine.TransformOptions.NameMode) nameModeBox.getSelectedItem();
+        /** Build ObfuscateOptions from the current control state. */
+        private ObfuscateEngine.ObfuscateOptions readOptions() {
+            ObfuscateEngine.ObfuscateOptions o = new ObfuscateEngine.ObfuscateOptions();
+            o.nameMode = (ObfuscateEngine.ObfuscateOptions.NameMode) nameModeBox.getSelectedItem();
             o.namePercent = percentSlider.getValue();
             o.fakeDirPercent = dirPercentSlider.getValue();
             o.fakeEocd = fakeEocdChk.isSelected();
             o.perturbCrc = crcChk.isSelected();
             o.perturbSizes = sizesChk.isSelected();
-            o.transformPng = contentPngChk.isSelected();
-            o.transformOgg = contentOggChk.isSelected();
-            o.transformJson = contentJsonChk.isSelected();
+            o.obfuscatePng = contentPngChk.isSelected();
+            o.obfuscateOgg = contentOggChk.isSelected();
+            o.obfuscateJson = contentJsonChk.isSelected();
             try {
                 o.seed = parseSeed(seedField.getText());
             } catch (NumberFormatException ex) {
@@ -925,7 +925,7 @@ public class ZipRepairTool extends JFrame {
             setLabelText("output.label", tr("output.label"));
             browseIn.setText(tr("browse"));
             browseOut.setText(tr("browse"));
-            transformBtn.setText(tr("transform"));
+            obfuscateBtn.setText(tr("obfuscate"));
             nameModeLabel.setText(tr("namemode.label"));
             percentLabelTitle.setText(tr("percent.label"));
             dirPercentLabelTitle.setText(tr("fakedir.label"));
@@ -986,7 +986,7 @@ public class ZipRepairTool extends JFrame {
             outputField.setEnabled(b);
             browseIn.setEnabled(b);
             browseOut.setEnabled(b);
-            transformBtn.setEnabled(b);
+            obfuscateBtn.setEnabled(b);
         }
 
         void appendLog(String line) {
@@ -994,46 +994,46 @@ public class ZipRepairTool extends JFrame {
             logArea.setCaretPosition(logArea.getDocument().getLength());
         }
 
-        private void startTransform() {
+        private void startObfuscate() {
             final String in = inputField.getText().trim();
             final String out = outputField.getText().trim();
             if (in.isEmpty() || out.isEmpty()) {
-                JOptionPane.showMessageDialog(ZipRepairTool.this, tr("error.paths"),
+                JOptionPane.showMessageDialog(McpackDeobfuscator.this, tr("error.paths"),
                         tr("app.title"), JOptionPane.WARNING_MESSAGE);
                 return;
             }
             final Path input = Paths.get(in);
-            final Path output = out.isEmpty() ? defaultOutput(input, "_transformed")
+            final Path output = out.isEmpty() ? defaultOutput(input, "_obfuscated")
                     : Paths.get(out);
             if (outputField.getText().trim().isEmpty()) {
                 outputField.setText(output.toString());
             }
-            final TransformEngine.TransformOptions opts = readOptions();
+            final ObfuscateEngine.ObfuscateOptions opts = readOptions();
 
             setBusy(true);
             logArea.setText("");
-            appendLog(tr("transform.header"));
-            appendLog("  " + trf("transform.params", opts.nameMode, opts.namePercent,
+            appendLog(tr("obfuscate.header"));
+            appendLog("  " + trf("obfuscate.params", opts.nameMode, opts.namePercent,
                     opts.fakeDirPercent, opts.fakeEocd, opts.perturbCrc,
                     opts.perturbSizes, opts.seed));
 
-            SwingWorker<TransformEngine.TransformResult, String> worker =
-                    new SwingWorker<TransformEngine.TransformResult, String>() {
+            SwingWorker<ObfuscateEngine.ObfuscateResult, String> worker =
+                    new SwingWorker<ObfuscateEngine.ObfuscateResult, String>() {
                 @Override
-                protected TransformEngine.TransformResult doInBackground() throws Exception {
-                    return TransformEngine.transform(input, output, opts);
+                protected ObfuscateEngine.ObfuscateResult doInBackground() throws Exception {
+                    return ObfuscateEngine.obfuscate(input, output, opts);
                 }
 
                 @Override
                 protected void done() {
                     setBusy(false);
                     try {
-                        TransformEngine.TransformResult r = get();
+                        ObfuscateEngine.ObfuscateResult r = get();
                         appendLog("");
-                        appendLog(trf("transform.done", r.entries, r.modified, r.bytes));
+                        appendLog(trf("obfuscate.done", r.entries, r.modified, r.bytes));
                         if (opts.anyContent()) {
-                            appendLog(trf("transform.content",
-                                    r.pngTransformed, r.oggTransformed, r.jsonMinified));
+                            appendLog(trf("obfuscate.content",
+                                    r.pngObfuscated, r.oggObfuscated, r.jsonMinified));
                         }
                         appendLog("");
                         appendLog(trf("status.done", output.toString()));
@@ -1096,14 +1096,14 @@ public class ZipRepairTool extends JFrame {
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new ZipRepairTool().setVisible(true);
+                new McpackDeobfuscator().setVisible(true);
             }
         });
     }
 
     /**
      * Handle a CLI command. Returns true if {@code args} matched a command
-     * (help / update / version / repair / detect / check / transform).
+     * (help / update / version / repair / detect / check / obfuscate).
      */
     private static boolean dispatchCli(String[] args, String lang) throws Exception {
         if (args.length >= 1 && ("-help".equals(args[0]) || "--help".equals(args[0])
@@ -1116,7 +1116,7 @@ public class ZipRepairTool extends JFrame {
             return true;
         }
         if (args.length >= 1 && "-version".equals(args[0])) {
-            System.out.println("ZipRepairTool " + VERSION + " (" + GITHUB_URL + ")");
+            System.out.println("McpackDeobfuscator " + VERSION + " (" + GITHUB_URL + ")");
             return true;
         }
         if (args.length >= 1 && "-repair".equals(args[0])) {
@@ -1146,16 +1146,16 @@ public class ZipRepairTool extends JFrame {
             runCliCheck(Paths.get(args[1]));
             return true;
         }
-        if (args.length >= 1 && "-transform".equals(args[0])) {
+        if (args.length >= 1 && "-obfuscate".equals(args[0])) {
             if (args.length < 3) {
-                System.err.println("usage: -transform <in.zip> <out.zip> "
+                System.err.println("usage: -obfuscate <in.zip> <out.zip> "
                         + "[--name <none|upper|digit|random>] [--percent <0-100>] "
                         + "[--fake-dir <0-100>] [--eocd] [--crc] [--no-sizes] "
                         + "[--content|--content-png|--content-ogg|--content-json] "
                         + "[--seed <n>] [--whitelist <a,b,c>]");
                 System.exit(2);
             }
-            runCliTransform(args);
+            runCliObfuscate(args);
             return true;
         }
         return false;
@@ -1199,27 +1199,27 @@ public class ZipRepairTool extends JFrame {
                 + " badCrc=" + r.badCrc
                 + " unreadable=" + r.unreadable
                 + " jvmReadable=" + r.jvmReadable);
-        System.out.println("corrupted=" + r.contentCorruption
-                + " png=" + r.contentCorruptionPng
-                + " ogg=" + r.contentCorruptionOgg
-                + " json=" + r.contentCorruptionJson
-                + " crcFingerprint=" + r.contentCorruptionCrcFingerprint);
+        System.out.println("obfuscated=" + r.contentObfuscation
+                + " png=" + r.packSquashPng
+                + " ogg=" + r.packSquashOgg
+                + " json=" + r.packSquashJson
+                + " crcFingerprint=" + r.packSquashCrcFingerprint);
         for (String d : r.details) {
             System.out.println("  " + d);
         }
     }
 
-    /** Command-line transformation entry point with tunable parameters. */
-    private static void runCliTransform(String[] args) throws Exception {
+    /** Command-line protection entry point with tunable parameters. */
+    private static void runCliObfuscate(String[] args) throws Exception {
         Path input = Paths.get(args[1]);
         Path output = Paths.get(args[2]);
         requireInput(input);
-        TransformEngine.TransformOptions opts = new TransformEngine.TransformOptions();
+        ObfuscateEngine.ObfuscateOptions opts = new ObfuscateEngine.ObfuscateOptions();
 
         for (int i = 3; i < args.length; i++) {
             String a = args[i];
             if ("--name".equals(a) && i + 1 < args.length) {
-                opts.nameMode = TransformEngine.TransformOptions.NameMode.valueOf(
+                opts.nameMode = ObfuscateEngine.ObfuscateOptions.NameMode.valueOf(
                         args[++i].toUpperCase(java.util.Locale.ROOT));
             } else if ("--percent".equals(a) && i + 1 < args.length) {
                 opts.namePercent = Integer.parseInt(args[++i]);
@@ -1232,15 +1232,15 @@ public class ZipRepairTool extends JFrame {
             } else if ("--no-sizes".equals(a)) {
                 opts.perturbSizes = false;
             } else if ("--content".equals(a)) {
-                opts.transformPng = true;
-                opts.transformOgg = true;
-                opts.transformJson = true;
+                opts.obfuscatePng = true;
+                opts.obfuscateOgg = true;
+                opts.obfuscateJson = true;
             } else if ("--content-png".equals(a)) {
-                opts.transformPng = true;
+                opts.obfuscatePng = true;
             } else if ("--content-ogg".equals(a)) {
-                opts.transformOgg = true;
+                opts.obfuscateOgg = true;
             } else if ("--content-json".equals(a)) {
-                opts.transformJson = true;
+                opts.obfuscateJson = true;
             } else if ("--seed".equals(a) && i + 1 < args.length) {
                 opts.seed = parseSeed(args[++i]);
             } else if ("--whitelist".equals(a) && i + 1 < args.length) {
@@ -1259,13 +1259,13 @@ public class ZipRepairTool extends JFrame {
                 + " fakeDir=" + opts.fakeDirPercent
                 + " eocd=" + opts.fakeEocd + " crc=" + opts.perturbCrc
                 + " sizes=" + opts.perturbSizes
-                + " contentPng=" + opts.transformPng
-                + " contentOgg=" + opts.transformOgg
-                + " contentJson=" + opts.transformJson
+                + " contentPng=" + opts.obfuscatePng
+                + " contentOgg=" + opts.obfuscateOgg
+                + " contentJson=" + opts.obfuscateJson
                 + " seed=" + opts.seed + " whitelist=" + opts.whitelist);
-        TransformEngine.TransformResult r;
+        ObfuscateEngine.ObfuscateResult r;
         try {
-            r = TransformEngine.transform(input, output, opts);
+            r = ObfuscateEngine.obfuscate(input, output, opts);
         } catch (IllegalArgumentException ex) {
             System.err.println("error: " + ex.getMessage());
             System.exit(1);
@@ -1273,7 +1273,7 @@ public class ZipRepairTool extends JFrame {
         }
         System.out.println("entries=" + r.entries + " modified=" + r.modified
                 + " bytes=" + r.bytes);
-        System.out.println("content: png=" + r.pngTransformed + " ogg=" + r.oggTransformed
+        System.out.println("content: png=" + r.pngObfuscated + " ogg=" + r.oggObfuscated
                 + " json=" + r.jsonMinified);
         System.out.println("done: " + output.toAbsolutePath());
     }
@@ -1304,31 +1304,31 @@ public class ZipRepairTool extends JFrame {
     private static void printHelp(String lang) {
         boolean zh = "chinese".equals(lang);
         if (zh) {
-            System.out.println("== " + loadMetaLang("name", true, "Zip \u4fee\u590d\u5de5\u5177") + " ==");
+            System.out.println("== " + loadMetaLang("name", true, "\u6211\u7684\u4e16\u754c\u8d44\u6e90\u5305\u53cd\u6df7\u6dc6\u5de5\u5177") + " ==");
             System.out.println(loadMetaLang("description", true,
-                    "\u4fee\u590d\u56e0\u4f20\u8f93\u800c\u635f\u574f\u7684 ZIP \u538b\u7f29\u5305\u3001\u5e76\u68c0\u67e5\u5176\u5b8c\u6574\u6027\u3002"));
+                    "\u53cd\u6df7\u6dc6\u88ab PackSquash \u5f0f\u5de5\u5177\u6df7\u6dc6/\u4fdd\u62a4\u7684 Minecraft \u8d44\u6e90\u5305\uff08mcpack\uff09\uff0c\u5e76\u6821\u9a8c\u5176\u5b8c\u6574\u6027\u3002"));
             System.out.println("注意: 中文输出不推荐,请优先使用英文。");
             System.out.println();
             System.out.println("用法:");
-            System.out.println("  java -jar ZipRepairTool.jar                          启动图形界面");
-            System.out.println("  java -jar ZipRepairTool.jar -cli <命令> [参数]          强制命令行模式(不启动图形界面)");
-            System.out.println("  java -jar ZipRepairTool.jar -help                     显示本帮助(关于)");
-            System.out.println("  java -jar ZipRepairTool.jar -version                  显示版本");
-            System.out.println("  java -jar ZipRepairTool.jar -update                   检查更新(GitHub API,无需令牌)");
-            System.out.println("  java -jar ZipRepairTool.jar -check <输入.zip>         检查压缩包");
-            System.out.println("  java -jar ZipRepairTool.jar -repair <输入.zip> <输出.zip>  修复压缩包");
-            System.out.println("  java -jar ZipRepairTool.jar -detect <输入.zip>        检测内容损坏");
-            System.out.println("  java -jar ZipRepairTool.jar -transform <输入.zip> <输出.zip> [选项]  转换");
+            System.out.println("  java -jar mcpack-deobfuscator.jar                          启动图形界面");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -cli <命令> [参数]          强制命令行模式(不启动图形界面)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -help                     显示本帮助(关于)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -version                  显示版本");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -update                   检查更新(GitHub API,无需令牌)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check <输入.zip>         检查压缩包");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -repair <输入.zip> <输出.zip>  修复压缩包");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -detect <输入.zip>        检测内容混淆");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <输入.zip> <输出.zip> [选项]  施加混淆");
             System.out.println();
-            System.out.println("转换选项:");
+            System.out.println("混淆选项:");
             System.out.println("  --name <none|upper|digit|random>     改名方式(默认 upper)");
             System.out.println("  --percent <0-100>                    改名条目比例(默认 100)");
             System.out.println("  --fake-dir <0-100>                   伪装成目录的比例(默认 0)");
             System.out.println("  --eocd                               在偏移 0 处附加伪 EOCD 签名");
             System.out.println("  --crc                                扰动 CRC-32 字段");
             System.out.println("  --no-sizes                           不扰动中央目录大小");
-            System.out.println("  --content                            转换 PNG+Ogg+JSON 内容");
-            System.out.println("  --content-png|--content-ogg|--content-json  只转换一种内容类型");
+            System.out.println("  --content                            混淆 PNG+Ogg+JSON 内容");
+            System.out.println("  --content-png|--content-ogg|--content-json  只混淆一种内容类型");
             System.out.println("  --seed <n>                           随机种子(十进制或 0x 十六进制,0..2^64-1)");
             System.out.println("  --whitelist <a,b,c>                  白名单(精确名或路径前缀,逗号分隔)");
             System.out.println("  -lang|--lang <chinese|english>           \u8f93\u51fa\u8bed\u8a00(\u9ed8\u8ba4 english;chinese \u4e0d\u63a8\u8350)");
@@ -1340,28 +1340,28 @@ public class ZipRepairTool extends JFrame {
         } else {
             System.out.println("== " + loadMetaLang("name", false, "Zip Repair Tool") + " ==");
             System.out.println(loadMetaLang("description", false,
-                    "Repairs ZIP archives damaged in transit, checks their integrity."));
+                    "Deobfuscate Minecraft resource packs (mcpack) protected or obfuscated by PackSquash tools, and verify their integrity."));
             System.out.println();
             System.out.println("Usage:");
-            System.out.println("  java -jar ZipRepairTool.jar                        Start the GUI");
-            System.out.println("  java -jar ZipRepairTool.jar -cli <command> [args]    Force CLI mode (no GUI)");
-            System.out.println("  java -jar ZipRepairTool.jar -help                   Show this help (about)");
-            System.out.println("  java -jar ZipRepairTool.jar -version                Show version");
-            System.out.println("  java -jar ZipRepairTool.jar -update                 Check for updates (GitHub API, no token)");
-            System.out.println("  java -jar ZipRepairTool.jar -check <in.zip>         Inspect an archive");
-            System.out.println("  java -jar ZipRepairTool.jar -repair <in.zip> <out.zip>   Repair an archive");
-            System.out.println("  java -jar ZipRepairTool.jar -detect <in.zip>        Detect content corruption");
-            System.out.println("  java -jar ZipRepairTool.jar -transform <in.zip> <out.zip> [options]   Apply transform");
+            System.out.println("  java -jar mcpack-deobfuscator.jar                        Start the GUI");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -cli <command> [args]    Force CLI mode (no GUI)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -help                   Show this help (about)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -version                Show version");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -update                 Check for updates (GitHub API, no token)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip>         Inspect an archive");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -repair <in.zip> <out.zip>   Repair an archive");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -detect <in.zip>        Detect PackSquash obfuscation");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> [options]   Re-apply obfuscation");
             System.out.println();
-            System.out.println("Transform options:");
+            System.out.println("Obfuscate options:");
             System.out.println("  --name <none|upper|digit|random>   Name rewrite mode (default upper)");
             System.out.println("  --percent <0-100>                  % of entries renamed (default 100)");
             System.out.println("  --fake-dir <0-100>                 % of entries disguised as dirs (default 0)");
             System.out.println("  --eocd                             Prepend a forged EOCD at offset 0");
             System.out.println("  --crc                              Perturb CRC-32 fields");
             System.out.println("  --no-sizes                         Do not perturb central-directory sizes");
-            System.out.println("  --content                          Transform PNG + Ogg + JSON contents");
-            System.out.println("  --content-png|--content-ogg|--content-json   Transform one content type");
+            System.out.println("  --content                          Obfuscate PNG + Ogg + JSON contents");
+            System.out.println("  --content-png|--content-ogg|--content-json   Obfuscate one content type");
             System.out.println("  --seed <n>                         RNG seed (decimal or 0x-hex, 0..2^64-1)");
             System.out.println("  --whitelist <a,b,c>                Entries (exact name or path prefix) untouched");
             System.out.println("  -lang|--lang <chinese|english>            Output language (default english; chinese not recommended)");
@@ -1383,7 +1383,7 @@ public class ZipRepairTool extends JFrame {
         String latest = null;
         String err = null;
         try {
-            URL url = new URL("https://api.github.com/repos/848488489-ff/ZipRepairTool/releases/latest");
+            URL url = new URL("https://api.github.com/repos/848488489-ff/McpackDeobfuscator/releases/latest");
             // No Authorization header anywhere: anonymous request, no token.
             // TLS validation failures are reported as errors, never bypassed.
             HttpURLConnection conn = openConn(url);
@@ -1431,7 +1431,7 @@ public class ZipRepairTool extends JFrame {
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
         conn.setRequestProperty("Accept", "application/vnd.github+json");
-        conn.setRequestProperty("User-Agent", "ZipRepairTool/" + VERSION);
+        conn.setRequestProperty("User-Agent", "McpackDeobfuscator/" + VERSION);
         return conn;
     }
 
