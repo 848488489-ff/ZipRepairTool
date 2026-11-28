@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="Version 1.2.2"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="Version 1.2.3"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="License: Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build passing">
@@ -24,12 +24,14 @@
 </p>
 
 mcpack-deobfuscator is a **Java** command-line and GUI tool that deobfuscates
-**Minecraft resource packs (mcpack)** that have been protected or obfuscated by
+**Minecraft Bedrock edition resource packs (mcpack)** that have been protected or obfuscated by
 tools such as **PackSquash**. Such packs cannot be opened by strict extractors
 (7-Zip, WinRAR, Windows Explorer, Python's `zipfile`) even though the game
 itself reads them fine. This tool detects the obfuscation, rebuilds a clean
 archive, and deobfuscates the obfuscated file contents so the extracted files
 actually open again.
+
+**mcpack is just a ZIP**: a `.mcpack` file is a Minecraft Bedrock edition resource pack that is a normal ZIP with a `.mcpack` extension; `.zip` resource packs work too. Input and output may use `.mcpack` or `.zip`, and the output keeps the input extension.
 
 It also offers an integrity **check** and a tunable **obfuscate** mode (the
 inverse of deobfuscate) for producing such packs deliberately.
@@ -170,8 +172,8 @@ zero.
 
 `-check` can run with **no configuration at all** (every check enabled). Optionally pass `--config <file>`; a simple UTF-8 `key=value` **`.properties`** file (no JSON schema, no required keys, `#`/`!` comments, blank lines ignored) overrides individual checks. **A configuration file is never required** — pure CLI still works.
 
-    java -jar mcpack-deobfuscator.jar -check pack.zip
-    java -jar mcpack-deobfuscator.jar -check pack.zip --config check.properties
+    java -jar mcpack-deobfuscator.jar -check pack.mcpack
+    java -jar mcpack-deobfuscator.jar -check pack.mcpack --config check.properties
 
 `check.properties` (all keys optional, default `true`; `check.strict` default `false`):
 

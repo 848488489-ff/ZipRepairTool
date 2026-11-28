@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="版本 1.2.2"></a>
+  <a href="version.json"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="版本 1.2.3"></a>
   <img src="https://img.shields.io/badge/license-Unlicense-lightgrey.svg" alt="许可证：Unlicense">
   <img src="https://img.shields.io/badge/JDK-8+-orange.svg" alt="JDK 8+">
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="构建通过">
@@ -25,10 +25,12 @@
 
 我的世界资源包反混淆工具（mcpack-deobfuscator）是一个 **Java** 命令行与
 图形界面工具，用于**反混淆**被 **PackSquash** 等工具混淆或保护的
-**Minecraft 资源包（mcpack）**。这类资源包无法被严格校验的解压软件
+**Minecraft 基岩版（Bedrock）资源包（mcpack）**。这类资源包无法被严格校验的解压软件
 （7-Zip、WinRAR、Windows 资源管理器、Python 的 `zipfile`）打开，即使游戏
 本身能正常读取。本工具能检测混淆、重建干净压缩包、并还原被混淆的文件
 内容，让提取出的文件真正能打开。
+
+**mcpack 就是个换扩展名的 ZIP**：`.mcpack` 是 Minecraft 基岩版资源包,本质是换成 `.mcpack` 扩展名的普通 ZIP;`.zip` 资源包同样支持。输入输出可用 `.mcpack` 或 `.zip`,输出保持输入扩展名。
 
 它还提供完整性**检查**功能，以及可调参数的**混淆**模式（反混淆的逆操作），
 用于主动制造这类资源包。
@@ -156,8 +158,8 @@
 
 `-check` **可以完全不用任何配置**（全部检查开启）。可选传 `--config <file>`；简单的 **UTF-8 `key=value` `.properties`** 文件（无需 JSON schema、无必填 key、支持 `#`/`!` 注释、空行忽略）可单独覆盖各项检查。**不强制必须用配置文件**——纯 CLI 照常可用。
 
-    java -jar mcpack-deobfuscator.jar -check pack.zip
-    java -jar mcpack-deobfuscator.jar -check pack.zip --config check.properties
+    java -jar mcpack-deobfuscator.jar -check pack.mcpack
+    java -jar mcpack-deobfuscator.jar -check pack.mcpack --config check.properties
 
 `check.properties`（所有 key 可选，默认 `true`；`check.strict` 默认 `false`）：
 

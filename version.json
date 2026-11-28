@@ -1,10 +1,10 @@
 {
   "name": "mcpack-deobfuscator",
-  "name_Chinese": "我的世界资源包反混淆工具",
-  "version": "1.2.2",
+  "name_Chinese": "我的世界基岩版资源包反混淆工具",
+  "version": "1.2.3",
   "repo": "https://github.com/848488489-ff/mcpack-deobfuscator",
   "license": "Unlicense",
   "jdk": "8",
-  "description": "Deobfuscate Minecraft resource packs (mcpack) protected or obfuscated by PackSquash tools, and verify their integrity.",
-  "description_Chinese": "反混淆被 PackSquash 工具混淆/保护的 Minecraft 资源包（mcpack），并校验其完整性。"
+  "description": "Deobfuscate Minecraft Bedrock edition resource packs (mcpack; a mcpack is a ZIP archive with a .mcpack extension) protected or obfuscated by PackSquash tools, and verify their integrity.",
+  "description_Chinese": "反混淆被 PackSquash 工具混淆/保护的 Minecraft 基岩版资源包（mcpack；mcpack 就是换扩展名的 ZIP），并校验其完整性。"
 }

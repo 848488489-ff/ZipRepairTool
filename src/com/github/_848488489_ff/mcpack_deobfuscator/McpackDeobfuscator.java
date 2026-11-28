@@ -66,9 +66,9 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  * CRC perturbation, RNG seed) on top of named presets.
  *
  * Without arguments the Swing GUI is shown. Command-line modes:
- *   java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>
+ *   java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip|mcpack> <out.zip|mcpack>
  *   java -jar mcpack-deobfuscator.jar -detect <in.zip>
- *   java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> <preset>
+ *   java -jar mcpack-deobfuscator.jar -obfuscate <in.zip|mcpack> <out.zip|mcpack> <preset>
  *       [--name <none|upper|digit|random>] [--percent <0-100>]
  *       [--eocd] [--crc] [--seed <n>]
  *
@@ -384,7 +384,7 @@ public class McpackDeobfuscator extends JFrame {
 
     private void choose(JTextField field, boolean save) {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("ZIP", "zip"));
+        chooser.setFileFilter(new FileNameExtensionFilter("ZIP / mcpack", "zip", "mcpack"));
         if (!field.getText().trim().isEmpty()) {
             chooser.setSelectedFile(new File(field.getText().trim()));
         }
@@ -394,12 +394,18 @@ public class McpackDeobfuscator extends JFrame {
         }
     }
 
+    /** Suggested output: keep the input extension (.zip stays .zip, .mcpack stays .mcpack). */
     private static Path defaultOutput(Path input, String suffix) {
         String name = input.getFileName().toString();
-        if (name.toLowerCase().endsWith(".zip")) {
-            name = name.substring(0, name.length() - 4);
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        String ext = ".zip";
+        if (lower.endsWith(".mcpack")) {
+            name = name.substring(0, name.length() - ".mcpack".length());
+            ext = ".mcpack";
+        } else if (lower.endsWith(".zip")) {
+            name = name.substring(0, name.length() - ".zip".length());
         }
-        return input.resolveSibling(name + suffix + ".zip");
+        return input.resolveSibling(name + suffix + ext);
     }
 
     /** Whether two paths point at the same file (normalized; case-insensitive on Windows). */
@@ -1191,7 +1197,7 @@ public class McpackDeobfuscator extends JFrame {
         }
         if (args.length >= 1 && ("-deobfuscate".equals(args[0]))) {
             if (args.length < 3) {
-                System.err.println("usage: -deobfuscate <in.zip> <out.zip>");
+                System.err.println("usage: -deobfuscate <in.zip|mcpack> <out.zip|mcpack>");
                 System.exit(2);
             }
             requireInput(Paths.get(args[1]));
@@ -1209,7 +1215,7 @@ public class McpackDeobfuscator extends JFrame {
         }
         if (args.length >= 1 && "-check".equals(args[0])) {
             if (args.length < 2) {
-                System.err.println("usage: -check <in.zip> [--config <file>]");
+                System.err.println("usage: -check <in.zip|mcpack> [--config <file>]");
                 System.exit(2);
             }
             requireInput(Paths.get(args[1]));
@@ -1232,7 +1238,7 @@ public class McpackDeobfuscator extends JFrame {
         }
         if (args.length >= 1 && "-obfuscate".equals(args[0])) {
             if (args.length < 3) {
-                System.err.println("usage: -obfuscate <in.zip> <out.zip> "
+                System.err.println("usage: -obfuscate <in.zip|mcpack> <out.zip|mcpack> "
                         + "[--name <none|upper|digit|random>] [--percent <0-100>] "
                         + "[--fake-dir <0-100>] [--eocd] [--crc] [--no-sizes] "
                         + "[--content|--content-png|--content-ogg|--content-json] "
@@ -1432,10 +1438,10 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  java -jar mcpack-deobfuscator.jar -help                     显示本帮助(关于)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -version                  显示版本");
             System.out.println("  java -jar mcpack-deobfuscator.jar -update                   检查更新(GitHub API,无需令牌)");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -check <输入.zip>         检查压缩包");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <输入.zip> <输出.zip>  反混淆资源包");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check <输入.zip|mcpack>         检查压缩包");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <输入.zip|mcpack> <输出.zip|mcpack>  反混淆资源包");
             System.out.println("  java -jar mcpack-deobfuscator.jar -detect <输入.zip>        检测内容混淆");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <输入.zip> <输出.zip> [选项]  施加混淆");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <输入.zip|mcpack> <输出.zip|mcpack> [选项]  施加混淆");
             System.out.println();
             System.out.println("混淆选项:");
             System.out.println("  --name <none|upper|digit|random>     改名方式(默认 upper)");
@@ -1465,11 +1471,11 @@ public class McpackDeobfuscator extends JFrame {
             System.out.println("  java -jar mcpack-deobfuscator.jar -help                   Show this help (about)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -version                Show version");
             System.out.println("  java -jar mcpack-deobfuscator.jar -update                 Check for updates (GitHub API, no token)");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip> [--config <file>]   Inspect an archive (optional config)");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -check <in.zip|mcpack> [--config <file>]   Inspect an archive (optional config)");
             System.out.println("  java -jar mcpack-deobfuscator.jar -check-config <file>       Validate a check-configuration file");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip> <out.zip>   Deobfuscate a protected resource pack");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -deobfuscate <in.zip|mcpack> <out.zip|mcpack>   Deobfuscate a protected resource pack");
             System.out.println("  java -jar mcpack-deobfuscator.jar -detect <in.zip>        Detect PackSquash obfuscation");
-            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <in.zip> <out.zip> [options]   Re-apply obfuscation");
+            System.out.println("  java -jar mcpack-deobfuscator.jar -obfuscate <in.zip|mcpack> <out.zip|mcpack> [options]   Re-apply obfuscation");
             System.out.println();
             System.out.println("Obfuscate options:");
             System.out.println("  --name <none|upper|digit|random>   Name rewrite mode (default upper)");
